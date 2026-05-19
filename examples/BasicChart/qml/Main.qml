@@ -7,14 +7,25 @@ Window {
     height: 600
     visible: true
     title: qsTr("Chart Plotter Example")
-    color: "#1e1e2e"
+    color: "white"
 
     ChartView {
-        anchors.centerIn: parent
-        width: 600
-        height: 400
+        LineChart {}
 
-        // dataFile: "sample_data.csv"
-        // chartColor: "#89b4fa"
+        name: "iloveyou"
+        color: "red"
+        implicitWidth: 400
+        implicitHeight: 400
+        anchors.centerIn: parent
+    }
+
+    ChartView {
+        BarChart {}
+
+        name: "ihateyou"
+        color: "blue"
+        implicitWidth: 100
+        implicitHeight: 100
+        anchors.centerIn: parent
     }
 }
