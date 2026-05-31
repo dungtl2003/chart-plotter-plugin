@@ -72,21 +72,48 @@ set(CHARTPLOTTER_HEADERS
     include/ChartPlotter/chart/AbstractChart.hpp
     include/ChartPlotter/chart/LineChart.hpp
     include/ChartPlotter/chart/BarChart.hpp
+    include/ChartPlotter/chart/TriangleChart.hpp
+
+    include/ChartPlotter/series/AbstractSeries.hpp
+    include/ChartPlotter/series/LineSeries.hpp
+    include/ChartPlotter/series/BarSeries.hpp
 
     include/ChartPlotter/strategy/IChartStrategy.hpp
     include/ChartPlotter/strategy/LineChartStrategy.hpp
     include/ChartPlotter/strategy/BarChartStrategy.hpp
+    include/ChartPlotter/strategy/TriangleChartStrategy.hpp
 
-    include/ChartPlotter/renderer/IChartRenderer.hpp
+    include/ChartPlotter/renderer/IOpenGLRenderer.hpp
     include/ChartPlotter/renderer/OpenGLLineRenderer.hpp
     include/ChartPlotter/renderer/OpenGLBarRenderer.hpp
+    include/ChartPlotter/renderer/OpenGLTriangleRenderer.hpp
 
     include/ChartPlotter/factory/IChartComponentFactory.hpp
     include/ChartPlotter/factory/LineChartComponentFactory.hpp
     include/ChartPlotter/factory/BarChartComponentFactory.hpp
     include/ChartPlotter/factory/ChartComponentFactoryProvider.hpp
+    include/ChartPlotter/factory/TriangleChartComponentFactory.hpp
+
+    include/ChartPlotter/data/LineRenderData.hpp
+    include/ChartPlotter/data/RenderData.hpp
+    include/ChartPlotter/data/DataSource.hpp
+    include/ChartPlotter/data/DataColumn.hpp
+    include/ChartPlotter/data/DataRow.hpp
+    include/ChartPlotter/data/DataBuffer.hpp
+    include/ChartPlotter/data/DataManager.hpp
+    include/ChartPlotter/data/DataReadOptions.hpp
+
+    include/ChartPlotter/data/reader/AbstractDataReader.hpp
+    include/ChartPlotter/data/reader/CsvDataReader.hpp
+
+    include/ChartPlotter/data/parser/AbstractDataParser.hpp
+    include/ChartPlotter/data/parser/CsvDataParser.hpp
 
     include/ChartPlotter/utils/LoggerManager.hpp
+    include/ChartPlotter/utils/Gl.hpp
+    include/ChartPlotter/utils/RenderMath.hpp
+
+    include/ChartPlotter/types/ChartEnums.hpp
 )
 
 set(CHARTPLOTTER_SOURCES
@@ -95,19 +122,62 @@ set(CHARTPLOTTER_SOURCES
     src/chart/AbstractChart.cpp
     src/chart/LineChart.cpp
     src/chart/BarChart.cpp
+    src/chart/TriangleChart.cpp
+
+    src/series/AbstractSeries.cpp
+    src/series/LineSeries.cpp
+    src/series/BarSeries.cpp
 
     src/strategy/LineChartStrategy.cpp
     src/strategy/BarChartStrategy.cpp
+    src/strategy/TriangleChartStrategy.cpp
 
     src/renderer/OpenGLLineRenderer.cpp
     src/renderer/OpenGLBarRenderer.cpp
+    src/renderer/OpenGLTriangleRenderer.cpp
 
     src/factory/LineChartComponentFactory.cpp
     src/factory/BarChartComponentFactory.cpp
     src/factory/ChartComponentFactoryProvider.cpp
+    src/factory/TriangleChartComponentFactory.cpp
+
+    src/data/LineRenderData.cpp
+    src/data/DataSource.cpp
+    src/data/DataColumn.cpp
+    src/data/DataRow.cpp
+    src/data/DataBuffer.cpp
+    src/data/DataManager.cpp
+
+    src/data/reader/AbstractDataReader.cpp
+    src/data/reader/CsvDataReader.cpp
+
+    src/data/parser/AbstractDataParser.cpp
+    src/data/parser/CsvDataParser.cpp
+
+    src/node/ChartRenderNode.cpp
 
     src/utils/ChartPlotterStartup.cpp
     src/utils/LoggerManager.cpp
+    src/utils/Gl.cpp
+    src/utils/RenderMath.cpp
+)
+
+set(CHARTPLOTTER_SHADERS
+    shaders/line/line.vert
+    shaders/line/line.frag
+    shaders/line/line-simple.frag
+    shaders/line/line-alpha.vert
+    shaders/line/line-alpha.frag
+    shaders/line/stroke-sdf.vert
+    shaders/line/stroke-sdf.frag
+    shaders/line/marker-sdf.vert
+    shaders/line/marker-sdf.frag
+    shaders/line/marker-sdf-2.vert
+    shaders/line/marker-sdf-2.frag
+    shaders/circle/circle.vert
+    shaders/circle/circle.frag
+    shaders/circle/circle-sdf.vert
+    shaders/circle/circle-sdf.frag
 )
 
 qt_add_qml_module(${PROJECT_NAME}
@@ -118,6 +188,9 @@ qt_add_qml_module(${PROJECT_NAME}
     SOURCES
         ${CHARTPLOTTER_HEADERS}
         ${CHARTPLOTTER_SOURCES}
+
+    RESOURCES
+        ${CHARTPLOTTER_SHADERS}
 )
 
 target_include_directories(${PROJECT_NAME}
@@ -127,6 +200,10 @@ target_include_directories(${PROJECT_NAME}
     PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/include/ChartPlotter
     ${CMAKE_CURRENT_SOURCE_DIR}/include/ChartPlotter/chart
+    ${CMAKE_CURRENT_SOURCE_DIR}/include/ChartPlotter/series
+    ${CMAKE_CURRENT_SOURCE_DIR}/include/ChartPlotter/data
+    ${CMAKE_CURRENT_SOURCE_DIR}/include/ChartPlotter/data/reader
+    ${CMAKE_CURRENT_SOURCE_DIR}/include/ChartPlotter/data/parser
 )
 
 

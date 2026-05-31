@@ -1,8 +1,13 @@
 #include "ChartPlotter/utils/LoggerManager.hpp"
 
+#include "spdlog/async_logger.h"
+#include "spdlog/common.h"
 #include "spdlog/sinks/null_sink.h"
+#include <spdlog/async.h>
 
 #include <iostream>
+
+namespace ChartPlotter {
 
 std::shared_ptr<spdlog::sinks::stdout_color_sink_mt>
     LoggerManager::m_static_console_sink = nullptr;
@@ -10,19 +15,17 @@ std::shared_ptr<spdlog::sinks::stdout_color_sink_mt>
 std::shared_ptr<spdlog::sinks::basic_file_sink_mt>
     LoggerManager::m_static_file_sink = nullptr;
 
-std::shared_ptr<spdlog::async_logger> LoggerManager::m_component_logger =
-    nullptr;
+std::shared_ptr<spdlog::logger> LoggerManager::m_component_logger = nullptr;
 
 void LoggerManager::init() {
   spdlog::level::level_enum level = spdlog::level::debug;
 
 #ifdef NDEBUG
-  // Default to info or warning for Release builds
-  level = spdlog::level::info;
+  level = spdlog::level::off;
 #endif
 
   // Override with environment variable if present
-  if (const char *env_p = std::getenv("LOG_LEVEL")) {
+  if (const char *env_p = std::getenv("CHARTPLOTTER_PLUGIN_LOG_LEVEL")) {
     std::string env_level(env_p);
     if (env_level == "trace") {
       level = spdlog::level::trace;
@@ -116,3 +119,5 @@ void LoggerManager::shutdown() {
   // Ensure all remaining messages in the queue are flushed before exit
   spdlog::shutdown();
 }
+
+} // namespace ChartPlotter

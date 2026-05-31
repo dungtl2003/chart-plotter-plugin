@@ -4,6 +4,8 @@
 #include <QObject>
 #include <qlogging.h>
 
+namespace ChartPlotter {
+
 static void initChartPlotter() {
 
   LoggerManager::init();
@@ -13,3 +15,5 @@ static void initChartPlotter() {
 }
 
 Q_COREAPP_STARTUP_FUNCTION(initChartPlotter)
+
+}; // namespace ChartPlotter
