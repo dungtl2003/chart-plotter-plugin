@@ -2,30 +2,52 @@
 
 namespace ChartPlotter {
 
-DataBuffer::DataBuffer(QObject *parent) : QObject(parent) {}
+QString DataSnapshot::toString() const {
+  QString result;
+  result.reserve(columns.size() * 33);
+
+  for (size_t i = 0; i < columns.size(); ++i) {
+    result.append("    " + columns[i].toString());
+    if (i < columns.size() - 1) {
+      result.append(",\n");
+    }
+  }
+
+  return QString(
+             "DataSnapshot({version = %1, rowCount = %2, columns = [\n%3\n]})")
+      .arg(QString::number(version))
+      .arg(QString::number(rowCount))
+      .arg(result);
+}
+
+ChartEnums::DataType DataSnapshot::columnType(int idx) const {
+  try {
+    return columns.at(idx).type;
+  } catch (std::exception e) {
+    return ChartEnums::DataType::Unknown;
+  }
+}
+
+QString DataSnapshot::columnName(int idx) const {
+  try {
+    return columns.at(idx).name;
+  } catch (std::exception e) {
+    return QString();
+  }
+}
+
+QVariant DataSnapshot::valueAt(int col, int row) const {
+  try {
+    return columns.at(col).values.at(row);
+  } catch (std::exception e) {
+    return QVariant();
+  }
+}
 
 void DataBuffer::clear() {
   m_columns.clear();
   m_columnIndex.clear();
   m_rowCount = 0;
-}
-
-void DataBuffer::setColumns(const QVector<DataColumn> &columns) {
-  clear();
-
-  m_columns = columns;
-
-  /**
-   * Technically, all columns should have the same row count, so we will take
-   * rows from the first one.
-   */
-  // if (!columns.empty()) {
-  //   m_rowCount = columns.at(0).values.size();
-  // }
-
-  for (qsizetype i = 0; i < m_columns.size(); ++i) {
-    m_columnIndex.insert(m_columns.at(i).name, i);
-  }
 }
 
 void DataBuffer::initColumns(const QVector<ColumnInitField> columnInitFields) {
@@ -57,9 +79,6 @@ void DataBuffer::appendRow(const DataRow &row) {
   }
 
   ++m_rowCount;
-
-  emit rowsInserted(insertedRow, insertedRow);
-  emit dataChanged();
 }
 
 void DataBuffer::appendRows(const QVector<DataRow> &rows) {
@@ -80,11 +99,6 @@ void DataBuffer::appendRows(const QVector<DataRow> &rows) {
 
     ++m_rowCount;
   }
-
-  const int lastInserted = m_rowCount - 1;
-
-  emit rowsInserted(firstInserted, lastInserted);
-  emit dataChanged();
 }
 
 int DataBuffer::rowCount() const { return m_rowCount; }
@@ -193,6 +207,20 @@ void DataBuffer::normalizeColumnSizes() {
   }
 
   m_rowCount = maxSize;
+}
+
+DataSnapshot DataBuffer::snapshot() {
+  if (!m_isValid) {
+    return DataSnapshot{};
+  }
+
+  return DataSnapshot{
+      .columns = m_columns,
+      .columnIndex = m_columnIndex,
+      .rowCount = rowCount(),
+      .columnCount = columnCount(),
+      .version = ++m_version,
+  };
 }
 
 } // namespace ChartPlotter

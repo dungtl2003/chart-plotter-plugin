@@ -20,7 +20,8 @@ class DataBufferUpdater : public QObject {
   Q_OBJECT
 
 public:
-  DataBufferUpdater(QPointer<DataBuffer> buffer, QObject *parent = nullptr);
+  DataBufferUpdater(std::shared_ptr<DataBuffer> buffer,
+                    QObject *parent = nullptr);
 
   void setConfig(const DataBufferUpdaterConfig &config);
 
@@ -33,7 +34,7 @@ signals:
   void bufferUpdated();
 
 private:
-  QPointer<DataBuffer> m_buffer;
+  std::shared_ptr<DataBuffer> m_buffer;
   DataBufferUpdaterConfig m_config;
   bool m_canInferTypes = false;
   bool m_configLoaded = false;

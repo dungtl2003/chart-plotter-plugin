@@ -1,12 +1,12 @@
 #pragma once
 
-#include "spdlog/common.h"
-#include <spdlog/async.h>
 #include <spdlog/sinks/basic_file_sink.h>
 #include <spdlog/sinks/stdout_color_sinks.h>
 #include <spdlog/spdlog.h>
 
 #include <memory>
+
+namespace ChartPlotter {
 
 class LoggerManager {
 public:
@@ -26,7 +26,7 @@ private:
   static std::shared_ptr<spdlog::sinks::stdout_color_sink_mt>
       m_static_console_sink;
   static std::shared_ptr<spdlog::sinks::basic_file_sink_mt> m_static_file_sink;
-  static std::shared_ptr<spdlog::async_logger> m_component_logger;
+  static std::shared_ptr<spdlog::logger> m_component_logger;
 };
 
 #define CP_TRACE(...)                                                          \
@@ -47,3 +47,5 @@ private:
 #define CP_CRITICAL(...)                                                       \
   if (LoggerManager::get())                                                    \
   LoggerManager::get()->critical(__VA_ARGS__)
+
+}; // namespace ChartPlotter

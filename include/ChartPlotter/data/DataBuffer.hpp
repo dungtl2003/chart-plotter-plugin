@@ -12,20 +12,29 @@
 
 namespace ChartPlotter {
 
+struct DataSnapshot {
+  QVector<DataColumn> columns;
+  QHash<QString, int> columnIndex;
+  int rowCount = 0;
+  int columnCount = 0;
+  quint64 version = 0;
+
+  QString toString() const;
+  ChartEnums::DataType columnType(int idx) const;
+  QString columnName(int idx) const;
+  QVariant valueAt(int col, int row) const;
+};
+
 struct ColumnInitField {
   QString name;
   ChartEnums::DataType ty = ChartEnums::DataType::Unknown;
 };
 
-class DataBuffer : public QObject {
-  Q_OBJECT
+class DataBuffer {
 
 public:
-  explicit DataBuffer(QObject *parent = nullptr);
-
   void clear();
 
-  void setColumns(const QVector<DataColumn> &columns);
   void initColumns(const QVector<ColumnInitField> columnInitFields);
   void appendRow(const DataRow &row);
   void appendRows(const QVector<DataRow> &rows);
@@ -46,16 +55,14 @@ public:
   void setIsValid(bool newIsValid);
   bool isValid() const;
 
-signals:
-  void dataReset();
-  void rowsInserted(int first, int last);
-  void dataChanged();
+  DataSnapshot snapshot();
 
 private:
   QVector<DataColumn> m_columns;
   QHash<QString, int> m_columnIndex;
   int m_rowCount = 0;
   bool m_isValid = true;
+  quint64 m_version = 0;
 
   void rebuildColumnIndex();
   void normalizeColumnSizes();

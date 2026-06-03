@@ -31,6 +31,22 @@ message(STATUS "[PROJECT] QT_HOST_PATH              = ${QT_HOST_PATH}")
 
 ################################################################################
 
+option(ENABLE_ASAN "Enable AddressSanitizer" OFF)
+
+if(ENABLE_ASAN)
+    add_compile_options(
+        -fsanitize=address
+        -fno-omit-frame-pointer
+        -g
+    )
+
+    add_link_options(
+        -fsanitize=address
+    )
+endif()
+
+################################################################################
+
 include(FetchContent)
 
 FetchContent_Declare(
@@ -55,104 +71,119 @@ find_package(Qt6 REQUIRED COMPONENTS Core Gui Qml Quick)
 
 qt_standard_project_setup(REQUIRES 6.8)
 
+if(CMAKE_BUILD_TYPE STREQUAL Debug)
+    add_compile_options(
+        -g
+        -O0
+        -fno-omit-frame-pointer
+    )
+endif()
+
 qt_policy(SET QTP0001 NEW)
 qt_policy(SET QTP0002 NEW)
 qt_policy(SET QTP0003 NEW)
 qt_policy(SET QTP0004 NEW)
 
-# Debug only
-# target_compile_options(${PROJECT_NAME} PRIVATE -fsanitize=address -g -fno-omit-frame-pointer)
-# target_link_options(${PROJECT_NAME} PRIVATE -fsanitize=address)
-
 ################################################################################
 
 set(CHARTPLOTTER_HEADERS
     include/ChartPlotter/ChartView.hpp
-
-    include/ChartPlotter/chart/AbstractChart.hpp
-    include/ChartPlotter/chart/LineChart.hpp
-    include/ChartPlotter/chart/BarChart.hpp
-    include/ChartPlotter/chart/TriangleChart.hpp
+    include/ChartPlotter/ChartLayoutPlanner.hpp
 
     include/ChartPlotter/series/AbstractSeries.hpp
+    include/ChartPlotter/series/XYSeries.hpp
     include/ChartPlotter/series/LineSeries.hpp
     include/ChartPlotter/series/BarSeries.hpp
+    include/ChartPlotter/series/PieSeries.hpp
+    include/ChartPlotter/series/ResolvedSeriesData.hpp
+    include/ChartPlotter/series/SeriesDataResolver.hpp
 
-    include/ChartPlotter/strategy/IChartStrategy.hpp
-    include/ChartPlotter/strategy/LineChartStrategy.hpp
-    include/ChartPlotter/strategy/BarChartStrategy.hpp
-    include/ChartPlotter/strategy/TriangleChartStrategy.hpp
+    include/ChartPlotter/strategy/ISeriesStrategy.hpp
+    include/ChartPlotter/strategy/LineSeriesStrategy.hpp
+    include/ChartPlotter/strategy/BarSeriesStrategy.hpp
+    include/ChartPlotter/strategy/TriangleSeriesStrategy.hpp
 
     include/ChartPlotter/renderer/IOpenGLRenderer.hpp
     include/ChartPlotter/renderer/OpenGLLineRenderer.hpp
     include/ChartPlotter/renderer/OpenGLBarRenderer.hpp
     include/ChartPlotter/renderer/OpenGLTriangleRenderer.hpp
 
-    include/ChartPlotter/factory/IChartComponentFactory.hpp
-    include/ChartPlotter/factory/LineChartComponentFactory.hpp
-    include/ChartPlotter/factory/BarChartComponentFactory.hpp
-    include/ChartPlotter/factory/ChartComponentFactoryProvider.hpp
-    include/ChartPlotter/factory/TriangleChartComponentFactory.hpp
+    include/ChartPlotter/factory/ISeriesComponentFactory.hpp
+    include/ChartPlotter/factory/LineSeriesComponentFactory.hpp
+    include/ChartPlotter/factory/BarSeriesComponentFactory.hpp
+    include/ChartPlotter/factory/SeriesComponentFactoryProvider.hpp
+    include/ChartPlotter/factory/TriangleSeriesComponentFactory.hpp
 
     include/ChartPlotter/data/LineRenderData.hpp
     include/ChartPlotter/data/RenderData.hpp
     include/ChartPlotter/data/DataSource.hpp
+    include/ChartPlotter/data/Column.hpp
     include/ChartPlotter/data/DataColumn.hpp
     include/ChartPlotter/data/DataRow.hpp
     include/ChartPlotter/data/DataBuffer.hpp
+    include/ChartPlotter/data/DataBufferUpdater.hpp
     include/ChartPlotter/data/DataManager.hpp
-    include/ChartPlotter/data/DataReadOptions.hpp
+    include/ChartPlotter/data/DataReadConfig.hpp
+    include/ChartPlotter/data/DataRange.hpp
 
     include/ChartPlotter/data/reader/AbstractDataReader.hpp
-    include/ChartPlotter/data/reader/CsvDataReader.hpp
+    include/ChartPlotter/data/reader/FileDataReader.hpp
+    include/ChartPlotter/data/reader/FifoDataReader.hpp
+    include/ChartPlotter/data/reader/DataReaderFactory.hpp
 
     include/ChartPlotter/data/parser/AbstractDataParser.hpp
     include/ChartPlotter/data/parser/CsvDataParser.hpp
+    include/ChartPlotter/data/parser/DataParserFactory.hpp
 
     include/ChartPlotter/utils/LoggerManager.hpp
     include/ChartPlotter/utils/Gl.hpp
     include/ChartPlotter/utils/RenderMath.hpp
+    include/ChartPlotter/utils/Variant.hpp
 
     include/ChartPlotter/types/ChartEnums.hpp
 )
 
 set(CHARTPLOTTER_SOURCES
     src/ChartView.cpp
-
-    src/chart/AbstractChart.cpp
-    src/chart/LineChart.cpp
-    src/chart/BarChart.cpp
-    src/chart/TriangleChart.cpp
+    src/ChartLayoutPlanner.cpp
 
     src/series/AbstractSeries.cpp
+    src/series/XYSeries.cpp
     src/series/LineSeries.cpp
     src/series/BarSeries.cpp
+    src/series/PieSeries.cpp
+    src/series/SeriesDataResolver.cpp
 
-    src/strategy/LineChartStrategy.cpp
-    src/strategy/BarChartStrategy.cpp
-    src/strategy/TriangleChartStrategy.cpp
+    src/strategy/LineSeriesStrategy.cpp
+    src/strategy/BarSeriesStrategy.cpp
+    src/strategy/TriangleSeriesStrategy.cpp
 
     src/renderer/OpenGLLineRenderer.cpp
     src/renderer/OpenGLBarRenderer.cpp
     src/renderer/OpenGLTriangleRenderer.cpp
 
-    src/factory/LineChartComponentFactory.cpp
-    src/factory/BarChartComponentFactory.cpp
-    src/factory/ChartComponentFactoryProvider.cpp
-    src/factory/TriangleChartComponentFactory.cpp
+    src/factory/LineSeriesComponentFactory.cpp
+    src/factory/BarSeriesComponentFactory.cpp
+    src/factory/SeriesComponentFactoryProvider.cpp
+    src/factory/TriangleSeriesComponentFactory.cpp
 
-    src/data/LineRenderData.cpp
     src/data/DataSource.cpp
+    src/data/Column.cpp
     src/data/DataColumn.cpp
     src/data/DataRow.cpp
     src/data/DataBuffer.cpp
+    src/data/DataBufferUpdater.cpp
     src/data/DataManager.cpp
+    src/data/DataRange.cpp
 
     src/data/reader/AbstractDataReader.cpp
-    src/data/reader/CsvDataReader.cpp
+    src/data/reader/FileDataReader.cpp
+    src/data/reader/FifoDataReader.cpp
+    src/data/reader/DataReaderFactory.cpp
 
     src/data/parser/AbstractDataParser.cpp
     src/data/parser/CsvDataParser.cpp
+    src/data/parser/DataParserFactory.cpp
 
     src/node/ChartRenderNode.cpp
 
@@ -160,6 +191,7 @@ set(CHARTPLOTTER_SOURCES
     src/utils/LoggerManager.cpp
     src/utils/Gl.cpp
     src/utils/RenderMath.cpp
+    src/utils/Variant.cpp
 )
 
 set(CHARTPLOTTER_SHADERS

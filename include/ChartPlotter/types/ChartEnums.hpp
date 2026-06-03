@@ -11,8 +11,8 @@ class ChartEnums : public QObject {
   QML_UNCREATABLE("ChartEnums is only used for enum access")
 
 public:
-  enum class ChartType { Line, Bar, Pie };
-  Q_ENUM(ChartType)
+  enum class SeriesType { Line, Bar, Pie };
+  Q_ENUM(SeriesType)
 
   enum class LineStyle { Solid, Dashed, Dotted };
   Q_ENUM(LineStyle)
@@ -32,10 +32,9 @@ public:
   enum class DataType {
     Unknown,
     String,
-    Boolean,
-    Double,
-    Int,
+    Number,
     Date,
+    Category,
   };
   Q_ENUM(DataType)
 };

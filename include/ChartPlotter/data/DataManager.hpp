@@ -17,7 +17,6 @@ public:
   explicit DataManager(QObject *parent = nullptr);
 
   void setDataReadConfig(const DataReadConfig &config);
-  const QPointer<DataBuffer> buffer() const;
 
 public slots:
   void start();
@@ -27,26 +26,22 @@ signals:
   void started();
   void stopped();
   void finished();
-  void errorOccurred(const QString &message);
-  void parseRequested(const QByteArray &chunk);
+  void errorOccurred(QString message);
+  void parseRequested(QByteArray chunk);
+  void snapshotReady(DataSnapshot snapshot);
 
 private slots:
   void onErrorOccurred(const QString &message);
   void onChunkReceived(const QByteArray &chunk);
   void onRowsParsed(const QVector<DataRow> &rows);
-  void onReaderFinished();
-  void onParserFinished();
+  void onBufferUpdated();
 
 private:
   DataReadConfig m_dataReadConfig;
-  QPointer<DataBuffer> m_buffer;
+  std::shared_ptr<DataBuffer> m_buffer;
   QPointer<DataBufferUpdater> m_bufferUpdater;
   QPointer<AbstractDataReader> m_reader;
   QPointer<AbstractDataParser> m_parser;
-  bool m_readerDone = false;
-  bool m_parserDone = false;
-
-  void cleanup();
 };
 
 } // namespace ChartPlotter

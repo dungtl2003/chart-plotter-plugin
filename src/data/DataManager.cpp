@@ -21,13 +21,11 @@ void DataManager::setDataReadConfig(const DataReadConfig &config) {
   m_dataReadConfig = config;
 }
 
-const QPointer<DataBuffer> DataManager::buffer() const { return m_buffer; }
-
 void DataManager::start() {
   const QUrl url = m_dataReadConfig.url;
   const ChartEnums::DataFormat format = m_dataReadConfig.format;
 
-  m_buffer = new DataBuffer(this);
+  m_buffer = std::make_shared<DataBuffer>();
   m_reader = DataReaderFactory::create(url, this);
   m_parser = DataParserFactory::create(format, this);
   m_bufferUpdater = new DataBufferUpdater(m_buffer, this);
@@ -45,18 +43,16 @@ void DataManager::start() {
           &DataManager::onChunkReceived, Qt::DirectConnection);
   connect(m_reader, &AbstractDataReader::errorOccurred, this,
           &DataManager::onErrorOccurred, Qt::DirectConnection);
-  connect(m_reader, &AbstractDataReader::finished, this,
-          &DataManager::onReaderFinished, Qt::DirectConnection);
 
   connect(this, &DataManager::parseRequested, m_parser,
           &AbstractDataParser::parse, Qt::DirectConnection);
   connect(m_parser, &AbstractDataParser::rowsParsed, this,
           &DataManager::onRowsParsed, Qt::DirectConnection);
-  connect(m_parser, &AbstractDataParser::finished, this,
-          &DataManager::onParserFinished, Qt::DirectConnection);
 
   connect(m_bufferUpdater, &DataBufferUpdater::errorOccurred, this,
           &DataManager::onErrorOccurred, Qt::DirectConnection);
+  connect(m_bufferUpdater, &DataBufferUpdater::bufferUpdated, this,
+          &DataManager::onBufferUpdated, Qt::DirectConnection);
 
   m_reader->setConfig(DataReaderConfig{
       .url = m_dataReadConfig.url,
@@ -81,7 +77,7 @@ void DataManager::onErrorOccurred(const QString &message) {
 }
 
 void DataManager::onChunkReceived(const QByteArray &chunk) {
-  if (!m_parser || m_readerDone) {
+  if (!m_parser) {
     return;
   }
 
@@ -104,45 +100,12 @@ void DataManager::onRowsParsed(const QVector<DataRow> &rows) {
   m_bufferUpdater->parseRows(rows);
 }
 
-void DataManager::onReaderFinished() {
-  if (m_readerDone) {
+void DataManager::onBufferUpdated() {
+  if (!m_buffer) {
     return;
   }
 
-  m_readerDone = true;
-
-  if (!m_parser) {
-    cleanup();
-    return;
-  }
-
-  emit parseRequested(eofChunk());
-}
-
-void DataManager::onParserFinished() {
-  if (!m_readerDone) {
-    return;
-  }
-
-  m_parserDone = true;
-
-  // emit finished();
-  // cleanup();
-}
-
-void DataManager::cleanup() {
-  if (m_reader) {
-    m_reader->deleteLater();
-    m_reader = nullptr;
-  }
-
-  if (m_parser) {
-    m_parser->deleteLater();
-    m_parser = nullptr;
-  }
-
-  m_readerDone = false;
-  m_parserDone = false;
+  emit snapshotReady(m_buffer->snapshot());
 }
 
 } // namespace ChartPlotter

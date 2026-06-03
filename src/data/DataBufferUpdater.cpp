@@ -1,11 +1,10 @@
 #include "ChartPlotter/data/DataBufferUpdater.hpp"
 #include "ChartPlotter/types/ChartEnums.hpp"
-#include "ChartPlotter/utils/Parse.hpp"
-#include "utils/LoggerManager.hpp"
+#include "ChartPlotter/utils/Variant.hpp"
 
 namespace ChartPlotter {
 
-DataBufferUpdater::DataBufferUpdater(QPointer<DataBuffer> buffer,
+DataBufferUpdater::DataBufferUpdater(std::shared_ptr<DataBuffer> buffer,
                                      QObject *parent)
     : m_buffer(buffer), QObject(parent) {}
 
@@ -40,7 +39,9 @@ void DataBufferUpdater::setConfig(const DataBufferUpdaterConfig &config) {
 }
 
 void DataBufferUpdater::reset() {
-  m_buffer.clear();
+  if (m_buffer) {
+    m_buffer->clear();
+  }
   m_currentPhysicalRow = 0;
 }
 
@@ -72,7 +73,7 @@ void DataBufferUpdater::parseRows(const QVector<DataRow> &rows) {
     m_currentPhysicalRow++;
   }
 
-  CP_DEBUG(m_buffer->toString().toStdString());
+  emit bufferUpdated();
 }
 
 std::expected<void, std::string>
@@ -140,12 +141,39 @@ DataBufferUpdater::parseHeaderRow(const DataRow &headerRow) {
     }
   }
 
-  QVector<ColumnInitField> colInitFields;
-  colInitFields.reserve(finalSize);
+  enum class ColumnNameSource {
+    Header,
+    Default,
+    Schema,
+  };
+
+  struct ColumnNameInfo {
+    qsizetype idx;
+    ColumnNameSource source;
+  };
 
   auto defaultColumnName = [](qsizetype i) {
     return QStringLiteral("column") + QString::number(i);
   };
+
+  auto sourceText = [](ColumnNameSource source) {
+    switch (source) {
+    case ColumnNameSource::Header:
+      return QStringLiteral("header");
+    case ColumnNameSource::Default:
+      return QStringLiteral("default column name");
+    case ColumnNameSource::Schema:
+      return QStringLiteral("column schema");
+    }
+
+    return QStringLiteral("unknown");
+  };
+
+  QVector<ColumnInitField> colInitFields;
+  QVector<ColumnNameSource> nameSources;
+
+  colInitFields.reserve(finalSize);
+  nameSources.reserve(finalSize);
 
   const qsizetype usedHeaderSize = std::min(headerSize, finalSize);
 
@@ -153,15 +181,18 @@ DataBufferUpdater::parseHeaderRow(const DataRow &headerRow) {
 
   for (; i < usedHeaderSize; ++i) {
     QString headerName = headerRow.values.at(i).toString();
+    ColumnNameSource source = ColumnNameSource::Header;
 
     if (headerName.isEmpty()) {
       headerName = defaultColumnName(i);
+      source = ColumnNameSource::Default;
     }
 
     colInitFields.push_back(ColumnInitField{
         .name = std::move(headerName),
         .ty = defaultType,
     });
+    nameSources.push_back(source);
   }
 
   for (; i < finalSize; ++i) {
@@ -169,6 +200,7 @@ DataBufferUpdater::parseHeaderRow(const DataRow &headerRow) {
         .name = defaultColumnName(i),
         .ty = defaultType,
     });
+    nameSources.push_back(ColumnNameSource::Default);
   }
 
   for (const auto &schema : m_config.columns) {
@@ -184,11 +216,40 @@ DataBufferUpdater::parseHeaderRow(const DataRow &headerRow) {
 
     if (!schema.name.isEmpty()) {
       field.name = schema.name;
+      nameSources[schema.idx] = ColumnNameSource::Schema;
     }
 
     if (schema.type != ChartEnums::DataType::Unknown) {
       field.ty = schema.type;
     }
+  }
+
+  QHash<QString, ColumnNameInfo> usedColumnNames;
+  usedColumnNames.reserve(finalSize);
+
+  for (qsizetype idx = 0; idx < finalSize; ++idx) {
+    const auto &name = colInitFields[idx].name;
+
+    const auto existingIt = usedColumnNames.constFind(name);
+    if (existingIt != usedColumnNames.constEnd()) {
+      const auto &existing = existingIt.value();
+
+      return std::unexpected(
+          QStringLiteral(
+              "Column name '%1' cannot be duplicated. It is used by column %2 "
+              "from %3 and column %4 from %5.")
+              .arg(name)
+              .arg(existing.idx)
+              .arg(sourceText(existing.source))
+              .arg(idx)
+              .arg(sourceText(nameSources[idx]))
+              .toStdString());
+    }
+
+    usedColumnNames.insert(name, ColumnNameInfo{
+                                     .idx = idx,
+                                     .source = nameSources[idx],
+                                 });
   }
 
   m_columnSize = finalSize;
@@ -229,18 +290,12 @@ bool DataBufferUpdater::resolveType(DataColumn &col,
   QString valStr = val.toString();
   ChartEnums::DataType valTy = ChartEnums::DataType::Unknown;
 
-  bool canBeInt = Parse::isInt(valStr);
-  bool canBeDouble = Parse::isDouble(valStr);
-  bool canBeBool = Parse::isBool(valStr);
-  bool canBeDate = Parse::isDate(valStr);
+  bool canBeNumber = Utils::Variant::isDouble(valStr);
+  bool canBeDate = Utils::Variant::isDate(valStr);
 
   // for simplicity, a value can only be one type
-  if (canBeInt) {
-    valTy = ChartEnums::DataType::Int;
-  } else if (canBeDouble) {
-    valTy = ChartEnums::DataType::Double;
-  } else if (canBeBool) {
-    valTy = ChartEnums::DataType::Boolean;
+  if (canBeNumber) {
+    valTy = ChartEnums::DataType::Number;
   } else if (canBeDate) {
     valTy = ChartEnums::DataType::Date;
   } else {

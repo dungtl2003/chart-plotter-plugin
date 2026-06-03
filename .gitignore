@@ -1,5 +1,5 @@
 logs
-build
+build*
 .cache
 bin
 compile_commands.json

@@ -10,22 +10,73 @@ Window {
     color: "white"
 
     ChartView {
-        LineChart {}
+        // DataSource {
+        //     id: dataSrc
+        //     url: "file:///home/ilikeblue/personal/projects/chart-plotter-plugin/temp/test1.csv"
+        //     format: ChartEnums.DataFormat.Csv
+        //     skipRows: 0
+        //     hasHeader: true
+        // }
+        DataSource {
+            id: dataSrc
+            url: "pipe:///tmp/chartplotter.csvpipe"
+            format: ChartEnums.DataFormat.Csv
+            totalColumns: 4
+            columns: [
+                Column {
+                    idx: 0
+                    name: "time"
+                    type: ChartEnums.DataType.Number
+                },
+                Column {
+                    idx: 1
+                    name: "temperature"
+                    type: ChartEnums.DataType.Number
+                },
+                Column {
+                    idx: 2
+                    type: ChartEnums.DataType.Number
+                },
+                Column {
+                    idx: 3
+                    type: ChartEnums.DataType.Number
+                }
+            ]
+        }
+        LineSeries {
+            source: dataSrc
+            // x: "time"
+            // y: "temperature"
+            xColumn: 0
+            yColumn: 1
+        }
+        LineSeries {
+            source: dataSrc
+            // x: "time"
+            // y: "temperature"
+            xColumn: 0
+            yColumn: 2
+            strokeColor: "#000000"
+        }
+        LineSeries {
+            source: dataSrc
+            // x: "time"
+            // y: "temperature"
+            xColumn: 0
+            yColumn: 3
+            strokeColor: "#00FFFF"
+        }
+        // LineSeries {
+        //     source: dataSrc
+        //     // x: "time"
+        //     // y: "temperature"
+        //     xColumn: 0
+        //     yColumn: 3
+        //     strokeColor: "#00FFFF"
+        // }
+        // BarSeries {}
 
         name: "iloveyou"
-        color: "red"
-        implicitWidth: 400
-        implicitHeight: 400
-        anchors.centerIn: parent
-    }
-
-    ChartView {
-        BarChart {}
-
-        name: "ihateyou"
-        color: "blue"
-        implicitWidth: 100
-        implicitHeight: 100
-        anchors.centerIn: parent
+        anchors.fill: parent
     }
 }
