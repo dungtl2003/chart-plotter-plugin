@@ -72,6 +72,7 @@ private:
   SeriesDataResolver m_seriesDataResolver;
   SeriesResolveResult m_resolvedSeries;
   std::optional<ChartRenderPackage> m_pendingRenderPackage;
+  PlotContext m_plotContext;
 
   void dropLogger();
   std::string appendUniqueId(std::string s) const;

@@ -19,9 +19,9 @@ void LineSeries::setStrokeColor(const QColor &color) {
   emit strokeColorChanged();
 }
 
-int LineSeries::strokeWidth() const { return m_strokeWidth; }
+float LineSeries::strokeWidth() const { return m_strokeWidth; }
 
-void LineSeries::setStrokeWidth(int width) {
+void LineSeries::setStrokeWidth(float width) {
   if (m_strokeWidth == width) {
     return;
   }
@@ -52,9 +52,9 @@ void LineSeries::setMarkerColor(const QColor &color) {
   emit markerColorChanged();
 }
 
-int LineSeries::markerRadius() const { return m_markerRadius; }
+float LineSeries::markerRadius() const { return m_markerRadius; }
 
-void LineSeries::setMarkerRadius(int radius) {
+void LineSeries::setMarkerRadius(float radius) {
   if (m_markerRadius == radius) {
     return;
   }
@@ -63,9 +63,9 @@ void LineSeries::setMarkerRadius(int radius) {
   emit markerRadiusChanged();
 }
 
-int LineSeries::antialias() const { return m_antialias; }
+float LineSeries::antialias() const { return m_antialias; }
 
-void LineSeries::setAntialias(int antialias) {
+void LineSeries::setAntialias(float antialias) {
   if (m_antialias == antialias) {
     return;
   }

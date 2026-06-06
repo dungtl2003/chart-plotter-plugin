@@ -8,20 +8,20 @@ namespace ChartPlotter {
 
 struct Stroke {
   QColor color = QColor("#ff3333");
-  int width = 1;
+  float width = 1.0f;
 };
 
 struct Marker {
   bool visible = false;
   QColor color = QColor("#000000");
-  int radius = 1;
+  float radius = 1.0f;
 };
 
 struct LineRenderData : public XYSeriesRenderData {
   Stroke stroke;
   Marker marker;
 
-  int antialias = 1;
+  float antialias = 1.0f;
 };
 
 } // namespace ChartPlotter

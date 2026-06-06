@@ -23,8 +23,8 @@ double normalize(double value, double min, double max) {
   return (value - min) / range;
 }
 
-QPointF mapDataToItem(const QPointF &point, const DataRange &xRange,
-                      const DataRange &yRange, const QRectF &plotArea) {
+QPointF mapDataToItem(const QPointF &point, const ValueAxisRange &xRange,
+                      const ValueAxisRange &yRange, const QRectF &plotArea) {
   const double nx = normalize(point.x(), xRange.min, xRange.max);
   const double ny = normalize(point.y(), yRange.min, yRange.max);
 
@@ -49,24 +49,13 @@ void OpenGLLineRenderer::initialize(QOpenGLExtraFunctions *f) {
 void OpenGLLineRenderer::release(QOpenGLExtraFunctions *f) {
   CP_DEBUG("OpenGLLineRenderer::release: Releasing OpenGL resources...");
 
-  if (m_strokeCoreVbo) {
-    f->glDeleteBuffers(1, &m_strokeCoreVbo);
-    m_strokeCoreVbo = 0;
+  if (m_strokeVbo) {
+    f->glDeleteBuffers(1, &m_strokeVbo);
+    m_strokeVbo = 0;
   }
-
-  if (m_strokeCoreVao) {
-    f->glDeleteVertexArrays(1, &m_strokeCoreVao);
-    m_strokeCoreVao = 0;
-  }
-
-  if (m_strokeFringeVbo) {
-    f->glDeleteBuffers(1, &m_strokeFringeVbo);
-    m_strokeFringeVbo = 0;
-  }
-
-  if (m_strokeFringeVao) {
-    f->glDeleteVertexArrays(1, &m_strokeFringeVao);
-    m_strokeFringeVao = 0;
+  if (m_strokeVao) {
+    f->glDeleteVertexArrays(1, &m_strokeVao);
+    m_strokeVao = 0;
   }
 
   if (m_markerVbo) {
@@ -99,8 +88,8 @@ void OpenGLLineRenderer::render(const ChartRenderContext &context) {
    *              fully visible                has opacity    fully invisible
    */
   const double halfWidth = m_data.get()->stroke.width * 0.5f;
-  const DataRange xRange = context.xRange;
-  const DataRange yRange = context.yRange;
+  const ValueAxisRange xRange = context.xAxisRange;
+  const ValueAxisRange yRange = context.yAxisRange;
 
   QVector<QVector2D> points;
   points.reserve(m_data.get()->points.size());
@@ -110,26 +99,6 @@ void OpenGLLineRenderer::render(const ChartRenderContext &context) {
         QVector2D(mapDataToItem(p, xRange, yRange, context.itemRect)));
   }
 
-  // const float rwidth = float(context.itemRect.width());
-  // const float rheight = float(context.itemRect.height());
-  // QVector<QVector2D> points = {
-  //     {rwidth * 0.00f, rheight * 0.65f}, {rwidth * 0.05f, rheight * 0.48f},
-  //     {rwidth * 0.10f, rheight * 0.58f}, {rwidth * 0.15f, rheight * 0.36f},
-  //     {rwidth * 0.20f, rheight * 0.42f}, {rwidth * 0.25f, rheight * 0.30f},
-  //     {rwidth * 0.30f, rheight * 0.52f}, {rwidth * 0.35f, rheight * 0.46f},
-  //     {rwidth * 0.40f, rheight * 0.68f}, {rwidth * 0.45f, rheight * 0.55f},
-  //     {rwidth * 0.50f, rheight * 0.60f}, {rwidth * 0.55f, rheight * 0.38f},
-  //     {rwidth * 0.60f, rheight * 0.44f}, {rwidth * 0.65f, rheight * 0.28f},
-  //     {rwidth * 0.70f, rheight * 0.34f}, {rwidth * 0.75f, rheight * 0.22f},
-  //     {rwidth * 0.80f, rheight * 0.40f}, {rwidth * 0.85f, rheight * 0.33f},
-  //     {rwidth * 0.90f, rheight * 0.18f}, {rwidth * 0.95f, rheight * 0.26f},
-  //     {rwidth * 1.00f, rheight * 0.14f},
-  // };
-  // QVector<QVector2D> points = {
-  //     {0.0f, 0.0f},
-  //     {rwidth, rheight},
-  // };
-
   buildStrokeVertices(points);
   buildMarkerVertices(points);
 
@@ -137,19 +106,16 @@ void OpenGLLineRenderer::render(const ChartRenderContext &context) {
   uploadMarkerVertices(f);
 
   f->glEnable(GL_BLEND);
-  f->glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+  f->glBlendFuncSeparate(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA, GL_ONE,
+                         GL_ONE_MINUS_SRC_ALPHA);
 
   bindStrokeProgram(mvp);
-  drawStrokeFringesAsTriangles(f);
+  drawStrokesAsTriangles(f);
   m_strokeProgram->release();
 
-  bindStrokeProgram(mvp);
-  drawStrokeCoresAsTriangles(f);
-  m_strokeProgram->release();
-
-  bindMarkerProgram(mvp);
-  drawMarkersAsTriangles(f);
-  m_markerProgram->release();
+  // bindMarkerProgram(mvp);
+  // drawMarkersAsTriangles(f);
+  // m_markerProgram->release();
 
   f->glDisable(GL_BLEND);
 }
@@ -163,19 +129,31 @@ void OpenGLLineRenderer::setData(std::unique_ptr<RenderData> data) {
 };
 
 void OpenGLLineRenderer::buildStrokeVertices(const QVector<QVector2D> &points) {
-  buildStrokeCoreVertices(points);
-  buildStrokeFringeVertices(points);
+  m_strokeVertices.clear();
+
+  QVector<StrokeSdfVertex> fringeVertices;
+  QVector<StrokeSdfVertex> coreVertices;
+
+  buildStrokeFringeVertices(points, fringeVertices);
+  buildStrokeCoreVertices(points, coreVertices);
+
+  m_strokeVertices.reserve(fringeVertices.size() + coreVertices.size());
+
+  // Important: fringe first, core second.
+  // This preserves "AA underneath core" behavior.
+  m_strokeVertices += fringeVertices;
+  m_strokeVertices += coreVertices;
 }
 
 void OpenGLLineRenderer::buildStrokeCoreVertices(
-    const QVector<QVector2D> &points) {
-  m_strokeCoreVertices.clear();
-  buildSegmentCoreVertices(points);
-  buildMiterJoinCoreVertices(points);
+    const QVector<QVector2D> &points, QVector<StrokeSdfVertex> &outVertices) {
+  buildSegmentCoreVertices(points, outVertices);
+  buildMiterJoinCoreVertices(points, outVertices);
 }
 
+// Quad Extend
 void OpenGLLineRenderer::buildSegmentCoreVertices(
-    const QVector<QVector2D> &points) {
+    const QVector<QVector2D> &points, QVector<StrokeSdfVertex> &outVertices) {
   assert(m_data != nullptr);
   const auto &lineData = m_data.get();
 
@@ -203,25 +181,24 @@ void OpenGLLineRenderer::buildSegmentCoreVertices(
     StrokeSdfVertex v2{p1 - n * halfWidth, InsideSdf};
     StrokeSdfVertex v3{p1 + n * halfWidth, InsideSdf};
 
-    m_strokeCoreVertices.push_back(v0);
-    m_strokeCoreVertices.push_back(v1);
-    m_strokeCoreVertices.push_back(v2);
+    outVertices.push_back(v0);
+    outVertices.push_back(v1);
+    outVertices.push_back(v2);
 
-    m_strokeCoreVertices.push_back(v2);
-    m_strokeCoreVertices.push_back(v1);
-    m_strokeCoreVertices.push_back(v3);
+    outVertices.push_back(v2);
+    outVertices.push_back(v1);
+    outVertices.push_back(v3);
   }
 }
 
 void OpenGLLineRenderer::buildStrokeFringeVertices(
-    const QVector<QVector2D> &points) {
-  m_strokeFringeVertices.clear();
-  buildSegmentFringeVertices(points);
-  buildMiterJoinFringeVertices(points);
+    const QVector<QVector2D> &points, QVector<StrokeSdfVertex> &outVertices) {
+  buildSegmentFringeVertices(points, outVertices);
+  buildMiterJoinFringeVertices(points, outVertices);
 }
 
 void OpenGLLineRenderer::buildSegmentFringeVertices(
-    const QVector<QVector2D> &points) {
+    const QVector<QVector2D> &points, QVector<StrokeSdfVertex> &outVertices) {
   assert(m_data != nullptr);
   const auto &lineData = m_data.get();
 
@@ -253,13 +230,13 @@ void OpenGLLineRenderer::buildSegmentFringeVertices(
     StrokeSdfVertex a2{p1 + normal * halfWidth, BoundarySdf};
     StrokeSdfVertex a3{p1 + normal * outerWidth, outerSdf};
 
-    m_strokeFringeVertices.push_back(a0);
-    m_strokeFringeVertices.push_back(a1);
-    m_strokeFringeVertices.push_back(a2);
+    outVertices.push_back(a0);
+    outVertices.push_back(a1);
+    outVertices.push_back(a2);
 
-    m_strokeFringeVertices.push_back(a2);
-    m_strokeFringeVertices.push_back(a1);
-    m_strokeFringeVertices.push_back(a3);
+    outVertices.push_back(a2);
+    outVertices.push_back(a1);
+    outVertices.push_back(a3);
 
     // Negative side fringe
     StrokeSdfVertex b0{p0 - normal * halfWidth, BoundarySdf};
@@ -267,18 +244,18 @@ void OpenGLLineRenderer::buildSegmentFringeVertices(
     StrokeSdfVertex b2{p0 - normal * outerWidth, outerSdf};
     StrokeSdfVertex b3{p1 - normal * outerWidth, outerSdf};
 
-    m_strokeFringeVertices.push_back(b0);
-    m_strokeFringeVertices.push_back(b2);
-    m_strokeFringeVertices.push_back(b1);
+    outVertices.push_back(b0);
+    outVertices.push_back(b2);
+    outVertices.push_back(b1);
 
-    m_strokeFringeVertices.push_back(b1);
-    m_strokeFringeVertices.push_back(b2);
-    m_strokeFringeVertices.push_back(b3);
+    outVertices.push_back(b1);
+    outVertices.push_back(b2);
+    outVertices.push_back(b3);
   }
 }
 
 void OpenGLLineRenderer::buildMiterJoinCoreVertices(
-    const QVector<QVector2D> &points) {
+    const QVector<QVector2D> &points, QVector<StrokeSdfVertex> &outVertices) {
   assert(m_data != nullptr);
   const auto &lineData = m_data.get();
 
@@ -343,24 +320,24 @@ void OpenGLLineRenderer::buildMiterJoinCoreVertices(
 
     if (useMiter) {
       // Full solid wedge.
-      m_strokeCoreVertices.push_back({p1, InsideSdf});
-      m_strokeCoreVertices.push_back({edgeA, InsideSdf});
-      m_strokeCoreVertices.push_back({miterPoint, InsideSdf});
+      outVertices.push_back({p1, InsideSdf});
+      outVertices.push_back({edgeA, InsideSdf});
+      outVertices.push_back({miterPoint, InsideSdf});
 
-      m_strokeCoreVertices.push_back({p1, InsideSdf});
-      m_strokeCoreVertices.push_back({miterPoint, InsideSdf});
-      m_strokeCoreVertices.push_back({edgeB, InsideSdf});
+      outVertices.push_back({p1, InsideSdf});
+      outVertices.push_back({miterPoint, InsideSdf});
+      outVertices.push_back({edgeB, InsideSdf});
     } else {
       // Bevel fallback.
-      m_strokeCoreVertices.push_back({p1, InsideSdf});
-      m_strokeCoreVertices.push_back({edgeA, InsideSdf});
-      m_strokeCoreVertices.push_back({edgeB, InsideSdf});
+      outVertices.push_back({p1, InsideSdf});
+      outVertices.push_back({edgeA, InsideSdf});
+      outVertices.push_back({edgeB, InsideSdf});
     }
   }
 }
 
 void OpenGLLineRenderer::buildMiterJoinFringeVertices(
-    const QVector<QVector2D> &points) {
+    const QVector<QVector2D> &points, QVector<StrokeSdfVertex> &outVertices) {
   assert(m_data != nullptr);
   const auto &lineData = m_data.get();
 
@@ -429,13 +406,13 @@ void OpenGLLineRenderer::buildMiterJoinFringeVertices(
     bool useMiter = (miterLength / halfWidth) <= 4.0f;
 
     if (!useMiter) {
-      m_strokeFringeVertices.push_back({edgeABoundary, BoundarySdf});
-      m_strokeFringeVertices.push_back({edgeAOuter, outerSdf});
-      m_strokeFringeVertices.push_back({edgeBBoundary, BoundarySdf});
+      outVertices.push_back({edgeABoundary, BoundarySdf});
+      outVertices.push_back({edgeAOuter, outerSdf});
+      outVertices.push_back({edgeBBoundary, BoundarySdf});
 
-      m_strokeFringeVertices.push_back({edgeBBoundary, BoundarySdf});
-      m_strokeFringeVertices.push_back({edgeAOuter, outerSdf});
-      m_strokeFringeVertices.push_back({edgeBOuter, outerSdf});
+      outVertices.push_back({edgeBBoundary, BoundarySdf});
+      outVertices.push_back({edgeAOuter, outerSdf});
+      outVertices.push_back({edgeBOuter, outerSdf});
       continue;
     }
 
@@ -449,21 +426,21 @@ void OpenGLLineRenderer::buildMiterJoinFringeVertices(
     StrokeSdfVertex bi{edgeBBoundary, BoundarySdf};
     StrokeSdfVertex bo{edgeBOuter, outerSdf};
 
-    m_strokeFringeVertices.push_back(ai);
-    m_strokeFringeVertices.push_back(ao);
-    m_strokeFringeVertices.push_back(mi);
+    outVertices.push_back(ai);
+    outVertices.push_back(ao);
+    outVertices.push_back(mi);
 
-    m_strokeFringeVertices.push_back(mi);
-    m_strokeFringeVertices.push_back(ao);
-    m_strokeFringeVertices.push_back(mo);
+    outVertices.push_back(mi);
+    outVertices.push_back(ao);
+    outVertices.push_back(mo);
 
-    m_strokeFringeVertices.push_back(mi);
-    m_strokeFringeVertices.push_back(mo);
-    m_strokeFringeVertices.push_back(bi);
+    outVertices.push_back(mi);
+    outVertices.push_back(mo);
+    outVertices.push_back(bi);
 
-    m_strokeFringeVertices.push_back(bi);
-    m_strokeFringeVertices.push_back(mo);
-    m_strokeFringeVertices.push_back(bo);
+    outVertices.push_back(bi);
+    outVertices.push_back(mo);
+    outVertices.push_back(bo);
   }
 }
 
@@ -492,28 +469,12 @@ void OpenGLLineRenderer::buildMarkerVertices(const QVector<QVector2D> &points) {
 }
 
 void OpenGLLineRenderer::uploadStrokeVertices(QOpenGLExtraFunctions *f) {
-  uploadStrokeCoreVertices(f);
-  uploadStrokeFringeVertices(f);
-}
-
-void OpenGLLineRenderer::uploadStrokeCoreVertices(QOpenGLExtraFunctions *f) {
-  f->glBindBuffer(GL_ARRAY_BUFFER, m_strokeCoreVbo);
+  f->glBindBuffer(GL_ARRAY_BUFFER, m_strokeVbo);
 
   f->glBufferData(GL_ARRAY_BUFFER,
-                  static_cast<GLsizeiptr>(m_strokeCoreVertices.size() *
+                  static_cast<GLsizeiptr>(m_strokeVertices.size() *
                                           sizeof(StrokeSdfVertex)),
-                  m_strokeCoreVertices.data(), GL_DYNAMIC_DRAW);
-
-  f->glBindBuffer(GL_ARRAY_BUFFER, 0);
-}
-
-void OpenGLLineRenderer::uploadStrokeFringeVertices(QOpenGLExtraFunctions *f) {
-  f->glBindBuffer(GL_ARRAY_BUFFER, m_strokeFringeVbo);
-
-  f->glBufferData(GL_ARRAY_BUFFER,
-                  static_cast<GLsizeiptr>(m_strokeFringeVertices.size() *
-                                          sizeof(StrokeSdfVertex)),
-                  m_strokeFringeVertices.data(), GL_DYNAMIC_DRAW);
+                  m_strokeVertices.data(), GL_DYNAMIC_DRAW);
 
   f->glBindBuffer(GL_ARRAY_BUFFER, 0);
 }
@@ -529,25 +490,14 @@ void OpenGLLineRenderer::uploadMarkerVertices(QOpenGLExtraFunctions *f) {
   f->glBindBuffer(GL_ARRAY_BUFFER, 0);
 }
 
-void OpenGLLineRenderer::drawStrokeCoresAsTriangles(QOpenGLExtraFunctions *f) {
-  if (m_strokeCoreVertices.empty()) {
+void OpenGLLineRenderer::drawStrokesAsTriangles(QOpenGLExtraFunctions *f) {
+  if (m_strokeVertices.empty()) {
     return;
   }
 
-  f->glBindVertexArray(m_strokeCoreVao);
+  f->glBindVertexArray(m_strokeVao);
   f->glDrawArrays(GL_TRIANGLES, 0,
-                  static_cast<GLsizei>(m_strokeCoreVertices.size()));
-  f->glBindVertexArray(0);
-}
-void OpenGLLineRenderer::drawStrokeFringesAsTriangles(
-    QOpenGLExtraFunctions *f) {
-  if (m_strokeFringeVertices.empty()) {
-    return;
-  }
-
-  f->glBindVertexArray(m_strokeFringeVao);
-  f->glDrawArrays(GL_TRIANGLES, 0,
-                  static_cast<GLsizei>(m_strokeFringeVertices.size()));
+                  static_cast<GLsizei>(m_strokeVertices.size()));
   f->glBindVertexArray(0);
 }
 
@@ -584,39 +534,11 @@ void OpenGLLineRenderer::bindMarkerProgram(const QMatrix4x4 &mvp) {
 }
 
 void OpenGLLineRenderer::initializeStrokeGeometry(QOpenGLExtraFunctions *f) {
-  initializeStrokeCoreGeometry(f);
-  initializeStrokeFringeGeometry(f);
-}
+  f->glGenVertexArrays(1, &m_strokeVao);
+  f->glGenBuffers(1, &m_strokeVbo);
 
-void OpenGLLineRenderer::initializeStrokeCoreGeometry(
-    QOpenGLExtraFunctions *f) {
-  f->glGenVertexArrays(1, &m_strokeCoreVao);
-  f->glGenBuffers(1, &m_strokeCoreVbo);
-
-  f->glBindVertexArray(m_strokeCoreVao);
-  f->glBindBuffer(GL_ARRAY_BUFFER, m_strokeCoreVbo);
-
-  f->glEnableVertexAttribArray(0);
-  f->glVertexAttribPointer(
-      0, 2, GL_FLOAT, GL_FALSE, sizeof(StrokeSdfVertex),
-      reinterpret_cast<void *>(offsetof(StrokeSdfVertex, position)));
-
-  f->glEnableVertexAttribArray(1);
-  f->glVertexAttribPointer(
-      1, 1, GL_FLOAT, GL_FALSE, sizeof(StrokeSdfVertex),
-      reinterpret_cast<void *>(offsetof(StrokeSdfVertex, sdf)));
-
-  f->glBindBuffer(GL_ARRAY_BUFFER, 0);
-  f->glBindVertexArray(0);
-}
-
-void OpenGLLineRenderer::initializeStrokeFringeGeometry(
-    QOpenGLExtraFunctions *f) {
-  f->glGenVertexArrays(1, &m_strokeFringeVao);
-  f->glGenBuffers(1, &m_strokeFringeVbo);
-
-  f->glBindVertexArray(m_strokeFringeVao);
-  f->glBindBuffer(GL_ARRAY_BUFFER, m_strokeFringeVbo);
+  f->glBindVertexArray(m_strokeVao);
+  f->glBindBuffer(GL_ARRAY_BUFFER, m_strokeVbo);
 
   f->glEnableVertexAttribArray(0);
   f->glVertexAttribPointer(

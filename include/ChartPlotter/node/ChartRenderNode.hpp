@@ -22,6 +22,7 @@ public:
   void releaseResources() override;
   RenderingFlags flags() const override;
 
+  void setPlotContext(PlotContext context);
   void setRenderers(std::vector<std::unique_ptr<IOpenGLRenderer>> renderers);
   void setRenderPackage(ChartRenderPackage package);
 
@@ -30,6 +31,8 @@ private:
 
   std::vector<std::unique_ptr<IOpenGLRenderer>> m_renderers;
   std::unique_ptr<QOpenGLDebugLogger> m_debugLogger;
+  std::unique_ptr<IOpenGLRenderer> m_xAxisRenderer;
+  std::unique_ptr<IOpenGLRenderer> m_yAxisRenderer;
 
   bool m_initialized = false;
 

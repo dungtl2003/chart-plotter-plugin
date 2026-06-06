@@ -37,6 +37,10 @@ public:
     Category,
   };
   Q_ENUM(DataType)
+
+  enum class AxisPosition { Left, Right, Top, Bottom };
+
+  enum class AxisType { Value, Category };
 };
 
 } // namespace ChartPlotter

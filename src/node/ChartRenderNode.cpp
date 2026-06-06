@@ -1,4 +1,5 @@
 #include "ChartPlotter/node/ChartRenderNode.hpp"
+#include "ChartPlotter/renderer/OpenGLValueAxisRenderer.hpp"
 #include "ChartPlotter/utils/LoggerManager.hpp"
 #include "ChartRenderContext.hpp"
 
@@ -48,6 +49,8 @@ void ChartRenderNode::render(const RenderState *state) {
       .plotArea = m_plotContext.plotArea,
       .xRange = m_plotContext.xRange,
       .yRange = m_plotContext.yRange,
+      .xAxisRange = m_plotContext.xAxisRange,
+      .yAxisRange = m_plotContext.yAxisRange,
   });
 }
 
@@ -86,6 +89,8 @@ void ChartRenderNode::setRenderers(
   }
 
   m_renderers = std::move(renderers);
+  m_xAxisRenderer = std::make_unique<OpenGLValueAxisRenderer>();
+  m_yAxisRenderer = std::make_unique<OpenGLValueAxisRenderer>();
 }
 
 void ChartRenderNode::setRenderPackage(ChartRenderPackage package) {
@@ -95,6 +100,12 @@ void ChartRenderNode::setRenderPackage(ChartRenderPackage package) {
    * ChartView builds the package.
    * ChartRenderNode owns the renderer objects.
    */
+  if (m_xAxisRenderer) {
+    m_xAxisRenderer->setData(std::move(package.xAxisPayload.data));
+  }
+  if (m_yAxisRenderer) {
+    m_yAxisRenderer->setData(std::move(package.yAxisPayload.data));
+  }
   for (auto &payload : package.seriesPayloads) {
     if (payload.seriesIndex < 0 ||
         payload.seriesIndex >= static_cast<int>(m_renderers.size())) {
@@ -105,10 +116,14 @@ void ChartRenderNode::setRenderPackage(ChartRenderPackage package) {
       continue;
     }
 
-    m_renderers[payload.seriesIndex]->setData(std::move(payload.data));
+    if (m_renderers[payload.seriesIndex]) {
+      m_renderers[payload.seriesIndex]->setData(std::move(payload.data));
+    }
   }
+}
 
-  m_plotContext = std::move(package.plotContext);
+void ChartRenderNode::setPlotContext(PlotContext context) {
+  m_plotContext = context;
 }
 
 void ChartRenderNode::initDebugLogger(QOpenGLContext *context) {
@@ -148,6 +163,12 @@ void ChartRenderNode::releaseDebugLogger() {
 }
 
 void ChartRenderNode::initializeRenderers(QOpenGLExtraFunctions *f) {
+  if (m_xAxisRenderer) {
+    m_xAxisRenderer->initialize(f);
+  }
+  if (m_yAxisRenderer) {
+    m_yAxisRenderer->initialize(f);
+  }
   for (const auto &renderer : m_renderers) {
     if (renderer) {
       renderer->initialize(f);
@@ -156,6 +177,12 @@ void ChartRenderNode::initializeRenderers(QOpenGLExtraFunctions *f) {
 }
 
 void ChartRenderNode::renderRenderers(const ChartRenderContext &context) {
+  if (m_xAxisRenderer) {
+    m_xAxisRenderer->render(context);
+  }
+  if (m_yAxisRenderer) {
+    m_yAxisRenderer->render(context);
+  }
   for (const auto &renderer : m_renderers) {
     if (renderer) {
       renderer->render(context);
@@ -168,6 +195,12 @@ void ChartRenderNode::releaseRenderers(QOpenGLExtraFunctions *f) {
     if (renderer) {
       renderer->release(f);
     }
+  }
+  if (m_xAxisRenderer) {
+    m_xAxisRenderer->release(f);
+  }
+  if (m_yAxisRenderer) {
+    m_yAxisRenderer->release(f);
   }
 }
 

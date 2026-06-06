@@ -1,5 +1,6 @@
 #pragma once
 
+#include "ChartPlotter/axis/ValueAxis.hpp"
 #include "ChartPlotter/data/DataRange.hpp"
 
 #include <QRectF>
@@ -52,17 +53,27 @@ struct SeriesRenderPayload {
   std::unique_ptr<RenderData> data;
 };
 
+struct AxisPayload {
+  ValueAxisTicks ticks;
+  ValueAxisRange range;
+  std::unique_ptr<RenderData> data;
+};
+
 struct PlotContext {
   QRectF itemRect;
   QRectF plotArea;
 
   DataRange xRange;
   DataRange yRange;
+
+  ValueAxisRange xAxisRange;
+  ValueAxisRange yAxisRange;
 };
 
 struct ChartRenderPackage {
-  PlotContext plotContext;
   std::vector<SeriesRenderPayload> seriesPayloads;
+  AxisPayload xAxisPayload;
+  AxisPayload yAxisPayload;
 };
 
 } // namespace ChartPlotter

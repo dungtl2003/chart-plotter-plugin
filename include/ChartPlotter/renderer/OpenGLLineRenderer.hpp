@@ -32,39 +32,37 @@ public:
 private:
   std::unique_ptr<QOpenGLShaderProgram> m_strokeProgram;
   std::unique_ptr<QOpenGLShaderProgram> m_markerProgram;
-  GLuint m_strokeCoreVao = 0;
-  GLuint m_strokeCoreVbo = 0;
-  GLuint m_strokeFringeVao = 0;
-  GLuint m_strokeFringeVbo = 0;
+  GLuint m_strokeVao = 0;
+  GLuint m_strokeVbo = 0;
   GLuint m_markerVao = 0;
   GLuint m_markerVbo = 0;
   std::unique_ptr<LineRenderData> m_data;
 
-  QVector<StrokeSdfVertex> m_strokeCoreVertices;
-  QVector<StrokeSdfVertex> m_strokeFringeVertices;
+  QVector<StrokeSdfVertex> m_strokeVertices;
   QVector<MarkerSdfVertex> m_markerVertices;
 
   void buildStrokeVertices(const QVector<QVector2D> &points);
-  void buildStrokeCoreVertices(const QVector<QVector2D> &points);
-  void buildSegmentCoreVertices(const QVector<QVector2D> &points);
-  void buildMiterJoinCoreVertices(const QVector<QVector2D> &points);
-  void buildStrokeFringeVertices(const QVector<QVector2D> &points);
-  void buildSegmentFringeVertices(const QVector<QVector2D> &points);
-  void buildMiterJoinFringeVertices(const QVector<QVector2D> &points);
+  void buildStrokeCoreVertices(const QVector<QVector2D> &points,
+                               QVector<StrokeSdfVertex> &outVertices);
+  void buildSegmentCoreVertices(const QVector<QVector2D> &points,
+                                QVector<StrokeSdfVertex> &outVertices);
+  void buildMiterJoinCoreVertices(const QVector<QVector2D> &points,
+                                  QVector<StrokeSdfVertex> &outVertices);
+  void buildStrokeFringeVertices(const QVector<QVector2D> &points,
+                                 QVector<StrokeSdfVertex> &outVertices);
+  void buildSegmentFringeVertices(const QVector<QVector2D> &points,
+                                  QVector<StrokeSdfVertex> &outVertices);
+  void buildMiterJoinFringeVertices(const QVector<QVector2D> &points,
+                                    QVector<StrokeSdfVertex> &outVertices);
   void buildMarkerVertices(const QVector<QVector2D> &points);
 
   void uploadStrokeVertices(QOpenGLExtraFunctions *f);
-  void uploadStrokeCoreVertices(QOpenGLExtraFunctions *f);
-  void uploadStrokeFringeVertices(QOpenGLExtraFunctions *f);
   void uploadMarkerVertices(QOpenGLExtraFunctions *f);
 
-  void drawStrokeCoresAsTriangles(QOpenGLExtraFunctions *f);
-  void drawStrokeFringesAsTriangles(QOpenGLExtraFunctions *f);
+  void drawStrokesAsTriangles(QOpenGLExtraFunctions *f);
   void drawMarkersAsTriangles(QOpenGLExtraFunctions *f);
 
   void initializeStrokeGeometry(QOpenGLExtraFunctions *f);
-  void initializeStrokeCoreGeometry(QOpenGLExtraFunctions *f);
-  void initializeStrokeFringeGeometry(QOpenGLExtraFunctions *f);
   void initializeMarkerGeometry(QOpenGLExtraFunctions *f);
 
   void bindStrokeProgram(const QMatrix4x4 &mvp);

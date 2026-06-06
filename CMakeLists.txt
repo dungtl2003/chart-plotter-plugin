@@ -107,6 +107,7 @@ set(CHARTPLOTTER_HEADERS
     include/ChartPlotter/renderer/OpenGLLineRenderer.hpp
     include/ChartPlotter/renderer/OpenGLBarRenderer.hpp
     include/ChartPlotter/renderer/OpenGLTriangleRenderer.hpp
+    include/ChartPlotter/renderer/OpenGLValueAxisRenderer.hpp
 
     include/ChartPlotter/factory/ISeriesComponentFactory.hpp
     include/ChartPlotter/factory/LineSeriesComponentFactory.hpp
@@ -114,8 +115,9 @@ set(CHARTPLOTTER_HEADERS
     include/ChartPlotter/factory/SeriesComponentFactoryProvider.hpp
     include/ChartPlotter/factory/TriangleSeriesComponentFactory.hpp
 
-    include/ChartPlotter/data/LineRenderData.hpp
     include/ChartPlotter/data/RenderData.hpp
+    include/ChartPlotter/data/LineRenderData.hpp
+    include/ChartPlotter/data/ValueAxisRenderData.hpp
     include/ChartPlotter/data/DataSource.hpp
     include/ChartPlotter/data/Column.hpp
     include/ChartPlotter/data/DataColumn.hpp
@@ -134,6 +136,8 @@ set(CHARTPLOTTER_HEADERS
     include/ChartPlotter/data/parser/AbstractDataParser.hpp
     include/ChartPlotter/data/parser/CsvDataParser.hpp
     include/ChartPlotter/data/parser/DataParserFactory.hpp
+
+    include/ChartPlotter/axis/ValueAxis.hpp
 
     include/ChartPlotter/utils/LoggerManager.hpp
     include/ChartPlotter/utils/Gl.hpp
@@ -161,6 +165,7 @@ set(CHARTPLOTTER_SOURCES
     src/renderer/OpenGLLineRenderer.cpp
     src/renderer/OpenGLBarRenderer.cpp
     src/renderer/OpenGLTriangleRenderer.cpp
+    src/renderer/OpenGLValueAxisRenderer.cpp
 
     src/factory/LineSeriesComponentFactory.cpp
     src/factory/BarSeriesComponentFactory.cpp
@@ -185,6 +190,8 @@ set(CHARTPLOTTER_SOURCES
     src/data/parser/CsvDataParser.cpp
     src/data/parser/DataParserFactory.cpp
 
+    src/axis/ValueAxis.cpp
+
     src/node/ChartRenderNode.cpp
 
     src/utils/ChartPlotterStartup.cpp
@@ -195,6 +202,7 @@ set(CHARTPLOTTER_SOURCES
 )
 
 set(CHARTPLOTTER_SHADERS
+    shaders/line/test.frag
     shaders/line/line.vert
     shaders/line/line.frag
     shaders/line/line-simple.frag

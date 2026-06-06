@@ -1,4 +1,8 @@
 #include "ChartPlotter/ChartView.hpp"
+
+#include "ChartPlotter/axis/ValueAxis.hpp"
+#include "ChartPlotter/data/RenderData.hpp"
+#include "ChartPlotter/data/ValueAxisRenderData.hpp"
 #include "ChartPlotter/node/ChartRenderNode.hpp"
 #include "ChartPlotter/utils/LoggerManager.hpp"
 #include "factory/SeriesComponentFactoryProvider.hpp"
@@ -67,6 +71,10 @@ QSGNode *ChartView::updatePaintNode(QSGNode *oldNode, UpdatePaintNodeData *) {
     node->setRenderPackage(std::move(*m_pendingRenderPackage));
     m_pendingRenderPackage.reset();
   }
+
+  m_plotContext.itemRect = boundingRect();
+  m_plotContext.plotArea = m_plotContext.itemRect.adjusted(-50, -50, -50, -50);
+  node->setPlotContext(m_plotContext);
 
   return node;
 }
@@ -225,11 +233,6 @@ bool ChartView::rebuildXYSeriesRenderPackage(
     const SeriesResolveResult &resolvedResult) {
   ChartRenderPackage package;
 
-  package.plotContext.itemRect = boundingRect();
-
-  // Basic plot area. Later calculate margins from axis labels.
-  package.plotContext.plotArea = boundingRect().adjusted(50, 20, -20, -40);
-
   DataRange globalX;
   DataRange globalY;
 
@@ -327,8 +330,26 @@ bool ChartView::rebuildXYSeriesRenderPackage(
     return false;
   }
 
-  package.plotContext.xRange = globalX;
-  package.plotContext.yRange = globalY;
+  m_plotContext.xRange = globalX;
+  m_plotContext.yRange = globalY;
+
+  // TODO: handle category axis as well
+  ValueAxisRange xAxisRange = ValueAxis::calculateRange(globalX);
+  ValueAxisRange yAxisRange = ValueAxis::calculateRange(globalY);
+  ValueAxisTicks xAxisTicks = ValueAxis::calculateTicks(xAxisRange);
+  ValueAxisTicks yAxisTicks = ValueAxis::calculateTicks(yAxisRange);
+  m_plotContext.xAxisRange = xAxisRange;
+  m_plotContext.yAxisRange = yAxisRange;
+  package.xAxisPayload = AxisPayload{
+      .ticks = std::move(xAxisTicks),
+      .range = std::move(xAxisRange),
+      .data = std::make_unique<ValueAxisRenderData>(),
+  };
+  package.yAxisPayload = AxisPayload{
+      .ticks = std::move(yAxisTicks),
+      .range = std::move(yAxisRange),
+      .data = std::make_unique<ValueAxisRenderData>(),
+  };
 
   m_pendingRenderPackage = std::move(package);
   return true;
