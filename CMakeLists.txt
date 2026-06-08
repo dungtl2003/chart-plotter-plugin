@@ -208,8 +208,12 @@ set(CHARTPLOTTER_SHADERS
     shaders/line/line-simple.frag
     shaders/line/line-alpha.vert
     shaders/line/line-alpha.frag
+    shaders/line/stroke.vert
+    shaders/line/stroke.frag
     shaders/line/stroke-sdf.vert
     shaders/line/stroke-sdf.frag
+    shaders/line/marker.vert
+    shaders/line/marker.frag
     shaders/line/marker-sdf.vert
     shaders/line/marker-sdf.frag
     shaders/line/marker-sdf-2.vert

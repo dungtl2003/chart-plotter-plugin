@@ -73,7 +73,8 @@ QSGNode *ChartView::updatePaintNode(QSGNode *oldNode, UpdatePaintNodeData *) {
   }
 
   m_plotContext.itemRect = boundingRect();
-  m_plotContext.plotArea = m_plotContext.itemRect.adjusted(-50, -50, -50, -50);
+  m_plotContext.plotArea =
+      m_plotContext.itemRect.adjusted(100, 100, -100, -100);
   node->setPlotContext(m_plotContext);
 
   return node;

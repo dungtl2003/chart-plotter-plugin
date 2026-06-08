@@ -10,14 +10,12 @@
 
 namespace ChartPlotter {
 
-struct StrokeSdfVertex {
+struct StrokeVertex {
   QVector2D position;
-  float sdf;
 };
 
-struct MarkerSdfVertex {
+struct MarkerVertex {
   QVector2D position;
-  QVector2D center;
 };
 
 class OpenGLLineRenderer : public IOpenGLRenderer {
@@ -38,22 +36,14 @@ private:
   GLuint m_markerVbo = 0;
   std::unique_ptr<LineRenderData> m_data;
 
-  QVector<StrokeSdfVertex> m_strokeVertices;
-  QVector<MarkerSdfVertex> m_markerVertices;
+  QVector<StrokeVertex> m_strokeVertices;
+  QVector<MarkerVertex> m_markerVertices;
 
   void buildStrokeVertices(const QVector<QVector2D> &points);
-  void buildStrokeCoreVertices(const QVector<QVector2D> &points,
-                               QVector<StrokeSdfVertex> &outVertices);
-  void buildSegmentCoreVertices(const QVector<QVector2D> &points,
-                                QVector<StrokeSdfVertex> &outVertices);
-  void buildMiterJoinCoreVertices(const QVector<QVector2D> &points,
-                                  QVector<StrokeSdfVertex> &outVertices);
-  void buildStrokeFringeVertices(const QVector<QVector2D> &points,
-                                 QVector<StrokeSdfVertex> &outVertices);
-  void buildSegmentFringeVertices(const QVector<QVector2D> &points,
-                                  QVector<StrokeSdfVertex> &outVertices);
-  void buildMiterJoinFringeVertices(const QVector<QVector2D> &points,
-                                    QVector<StrokeSdfVertex> &outVertices);
+  void buildSegmentVertices(const QVector<QVector2D> &points,
+                            QVector<StrokeVertex> &outVertices);
+  void buildMiterJoinVertices(const QVector<QVector2D> &points,
+                              QVector<StrokeVertex> &outVertices);
   void buildMarkerVertices(const QVector<QVector2D> &points);
 
   void uploadStrokeVertices(QOpenGLExtraFunctions *f);

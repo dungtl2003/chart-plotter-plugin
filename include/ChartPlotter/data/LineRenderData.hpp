@@ -14,7 +14,7 @@ struct Stroke {
 struct Marker {
   bool visible = false;
   QColor color = QColor("#000000");
-  float radius = 1.0f;
+  float radius = 2.0f;
 };
 
 struct LineRenderData : public XYSeriesRenderData {

@@ -49,8 +49,9 @@ Window {
             // y: "temperature"
             xColumn: 0
             yColumn: 1
-            strokeWidth: 50
-            antialias: 3
+            strokeWidth: 40
+            markerVisible: true
+            markerRadius: 40
         }
         // LineSeries {
         //     source: dataSrc
