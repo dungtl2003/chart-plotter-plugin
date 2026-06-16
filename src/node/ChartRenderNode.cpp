@@ -51,6 +51,7 @@ void ChartRenderNode::render(const RenderState *state) {
       .yRange = m_plotContext.yRange,
       .xAxisRange = m_plotContext.xAxisRange,
       .yAxisRange = m_plotContext.yAxisRange,
+      .axisPositions = m_plotContext.axisPositions,
   });
 }
 

@@ -142,6 +142,7 @@ set(CHARTPLOTTER_HEADERS
     include/ChartPlotter/utils/LoggerManager.hpp
     include/ChartPlotter/utils/Gl.hpp
     include/ChartPlotter/utils/RenderMath.hpp
+    include/ChartPlotter/utils/RenderMath.tpp
     include/ChartPlotter/utils/Variant.hpp
 
     include/ChartPlotter/types/ChartEnums.hpp
@@ -222,6 +223,10 @@ set(CHARTPLOTTER_SHADERS
     shaders/circle/circle.frag
     shaders/circle/circle-sdf.vert
     shaders/circle/circle-sdf.frag
+    shaders/axis/line.vert
+    shaders/axis/line.frag
+    shaders/axis/text.vert
+    shaders/axis/text.frag
 )
 
 qt_add_qml_module(${PROJECT_NAME}
@@ -296,5 +301,6 @@ if(CMAKE_PROJECT_NAME STREQUAL PROJECT_NAME)
     
     if(BUILD_EXAMPLES)
         add_subdirectory(examples/BasicChart)
+        add_subdirectory(examples/RealTimeChart)
     endif()
 endif()

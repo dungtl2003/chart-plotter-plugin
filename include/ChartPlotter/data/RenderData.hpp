@@ -2,6 +2,7 @@
 
 #include "ChartPlotter/axis/ValueAxis.hpp"
 #include "ChartPlotter/data/DataRange.hpp"
+#include "ChartPlotter/types/ChartEnums.hpp"
 
 #include <QRectF>
 
@@ -54,8 +55,6 @@ struct SeriesRenderPayload {
 };
 
 struct AxisPayload {
-  ValueAxisTicks ticks;
-  ValueAxisRange range;
   std::unique_ptr<RenderData> data;
 };
 
@@ -68,6 +67,8 @@ struct PlotContext {
 
   ValueAxisRange xAxisRange;
   ValueAxisRange yAxisRange;
+
+  ChartEnums::AxisPositions axisPositions;
 };
 
 struct ChartRenderPackage {

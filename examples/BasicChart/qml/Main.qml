@@ -12,7 +12,7 @@ Window {
     ChartView {
         DataSource {
             id: dataSrc
-            url: "file:///home/ilikeblue/personal/projects/chart-plotter-plugin/temp/testrand.csv"
+            url: "file:///home/ilikeblue/personal/projects/chart-plotter-plugin/temp/trendrand.csv"
             format: ChartEnums.DataFormat.Csv
             skipRows: 0
             hasHeader: true
@@ -43,31 +43,36 @@ Window {
         //         }
         //     ]
         // }
+        // LineSeries {
+        //     source: dataSrc
+        //     // x: "time"
+        //     // y: "temperature"
+        //     xColumn: 0
+        //     yColumn: 1
+        //     strokeWidth: 5
+        //     strokeMiterLimit: 2
+        //     strokePattern: ChartEnums.StrokePattern.Dash
+        //     antialias: 1
+        // }
         LineSeries {
             source: dataSrc
             // x: "time"
             // y: "temperature"
             xColumn: 0
-            yColumn: 1
-            strokeWidth: 40
-            markerVisible: true
-            markerRadius: 40
+            yColumn: 2
+            strokeColor: "#000000"
+            strokeWidth: 5
+            // markerVisible: true
         }
         // LineSeries {
         //     source: dataSrc
         //     // x: "time"
         //     // y: "temperature"
         //     xColumn: 0
-        //     yColumn: 2
-        //     strokeColor: "#000000"
-        // }
-        // LineSeries {
-        //     source: dataSrc
-        //     // x: "time"
-        //     // y: "temperature"
-        //     xColumn: 0
         //     yColumn: 3
-        //     strokeColor: "#00FFFF"
+        //     strokeColor: "#9a3d48"
+        //     strokePattern: ChartEnums.StrokePattern.Dot
+        //     strokeWidth: 5
         // }
         // LineSeries {
         //     source: dataSrc

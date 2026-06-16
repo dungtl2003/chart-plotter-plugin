@@ -38,9 +38,20 @@ public:
   };
   Q_ENUM(DataType)
 
-  enum class AxisPosition { Left, Right, Top, Bottom };
+  enum class StrokePattern { Solid, Dash, Dot };
+  Q_ENUM(StrokePattern)
+
+  enum AxisPosition {
+    Left = 0x01,
+    Right = 0x02,
+    Top = 0x04,
+    Bottom = 0x08,
+  };
+  Q_DECLARE_FLAGS(AxisPositions, AxisPosition)
 
   enum class AxisType { Value, Category };
 };
+
+Q_DECLARE_OPERATORS_FOR_FLAGS(ChartEnums::AxisPositions)
 
 } // namespace ChartPlotter

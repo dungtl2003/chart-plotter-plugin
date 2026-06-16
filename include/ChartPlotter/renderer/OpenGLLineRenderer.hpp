@@ -10,12 +10,17 @@
 
 namespace ChartPlotter {
 
+struct DashRun {
+  QVector<QVector2D> points;
+};
+
 struct StrokeVertex {
   QVector2D position;
 };
 
-struct MarkerVertex {
+struct MarkerSdfVertex {
   QVector2D position;
+  QVector2D center;
 };
 
 class OpenGLLineRenderer : public IOpenGLRenderer {
@@ -37,9 +42,14 @@ private:
   std::unique_ptr<LineRenderData> m_data;
 
   QVector<StrokeVertex> m_strokeVertices;
-  QVector<MarkerVertex> m_markerVertices;
+  QVector<MarkerSdfVertex> m_markerVertices;
 
   void buildStrokeVertices(const QVector<QVector2D> &points);
+  void buildSolidStrokeVertices(const QVector<QVector2D> &points);
+  void buildDashedStrokeVertices(const QVector<QVector2D> &points,
+                                 QVector<StrokeVertex> &outVertices);
+  void buildDottedStrokeVertices(const QVector<QVector2D> &points,
+                                 QVector<StrokeVertex> &outVertices);
   void buildSegmentVertices(const QVector<QVector2D> &points,
                             QVector<StrokeVertex> &outVertices);
   void buildMiterJoinVertices(const QVector<QVector2D> &points,

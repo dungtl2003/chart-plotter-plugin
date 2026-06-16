@@ -106,9 +106,17 @@ LineSeriesStrategy::build(const AbstractSeries &series,
 
   data->marker.color = lineSeries->markerColor();
   data->marker.visible = lineSeries->markerVisible();
-  data->marker.radius = lineSeries->markerRadius();
   data->stroke.color = lineSeries->strokeColor();
   data->stroke.width = lineSeries->strokeWidth();
+  data->stroke.miterLimit = lineSeries->strokeMiterLimit();
+  data->stroke.pattern = lineSeries->strokePattern();
+  data->stroke.dashStyle = DashStyle{
+      .length = data->stroke.width * 2.5f,
+      .gap = data->stroke.width * 1.5f,
+  };
+  data->stroke.dotStyle = DotStyle{
+      .gap = data->stroke.width,
+  };
   data->antialias = lineSeries->antialias();
 
   if (!resolved.valid) {

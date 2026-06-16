@@ -339,17 +339,43 @@ bool ChartView::rebuildXYSeriesRenderPackage(
   ValueAxisRange yAxisRange = ValueAxis::calculateRange(globalY);
   ValueAxisTicks xAxisTicks = ValueAxis::calculateTicks(xAxisRange);
   ValueAxisTicks yAxisTicks = ValueAxis::calculateTicks(yAxisRange);
+  // Ticks range normally is larger than data range
+  if (xAxisTicks.ticks.size() > 0) {
+    xAxisRange = ValueAxisRange{.min = xAxisTicks.ticks.at(0).value,
+                                .max = xAxisTicks.ticks.last().value};
+  }
+  if (yAxisTicks.ticks.size() > 0) {
+    yAxisRange = ValueAxisRange{.min = yAxisTicks.ticks.at(0).value,
+                                .max = yAxisTicks.ticks.last().value};
+  }
   m_plotContext.xAxisRange = xAxisRange;
   m_plotContext.yAxisRange = yAxisRange;
+  m_plotContext.axisPositions =
+      ChartEnums::AxisPosition::Left | ChartEnums::AxisPosition::Bottom;
+  auto xData = std::make_unique<ValueAxisRenderData>();
+  xData->pos = ChartEnums::AxisPosition::Bottom;
+  xData->ticks.reserve(xAxisTicks.ticks.size() - 2);
+  for (qsizetype i = 0; i < xAxisTicks.ticks.size(); ++i) {
+    xData->ticks.push_back(ValueAxisTickRenderData{
+        .pos = QPointF(xAxisRange.min + i * xAxisTicks.step, yAxisRange.min),
+        .label = xAxisTicks.ticks.at(i).label,
+    });
+  }
+  auto yData = std::make_unique<ValueAxisRenderData>();
+  yData->pos = ChartEnums::AxisPosition::Left;
+  yData->ticks.reserve(yAxisTicks.ticks.size() - 2);
+  for (qsizetype i = 0; i < yAxisTicks.ticks.size(); ++i) {
+    yData->ticks.push_back(ValueAxisTickRenderData{
+        .pos = QPointF(xAxisRange.min, yAxisRange.min + i * yAxisTicks.step),
+        .label = yAxisTicks.ticks.at(i).label,
+    });
+  }
+  // CP_DEBUG(yData->toString().toStdString());
   package.xAxisPayload = AxisPayload{
-      .ticks = std::move(xAxisTicks),
-      .range = std::move(xAxisRange),
-      .data = std::make_unique<ValueAxisRenderData>(),
+      .data = std::move(xData),
   };
   package.yAxisPayload = AxisPayload{
-      .ticks = std::move(yAxisTicks),
-      .range = std::move(yAxisRange),
-      .data = std::make_unique<ValueAxisRenderData>(),
+      .data = std::move(yData),
   };
 
   m_pendingRenderPackage = std::move(package);

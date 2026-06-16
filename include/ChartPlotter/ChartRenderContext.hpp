@@ -1,0 +1,28 @@
+#pragma once
+
+#include "ChartPlotter/axis/ValueAxis.hpp"
+#include "ChartPlotter/data/DataRange.hpp"
+#include "ChartPlotter/types/ChartEnums.hpp"
+
+#include <QMatrix4x4>
+#include <QOpenGLExtraFunctions>
+
+namespace ChartPlotter {
+
+struct ChartRenderContext {
+  QOpenGLExtraFunctions *f;
+  QMatrix4x4 mvp;
+
+  QRectF itemRect;
+  QRectF plotArea;
+
+  DataRange xRange;
+  DataRange yRange;
+
+  ValueAxisRange xAxisRange;
+  ValueAxisRange yAxisRange;
+
+  ChartEnums::AxisPositions axisPositions;
+};
+
+} // namespace ChartPlotter

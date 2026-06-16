@@ -30,6 +30,30 @@ void LineSeries::setStrokeWidth(float width) {
   emit strokeWidthChanged();
 }
 
+float LineSeries::strokeMiterLimit() const { return m_strokeMiterLimit; }
+
+void LineSeries::setStrokeMiterLimit(float newLimit) {
+  if (m_strokeMiterLimit == newLimit) {
+    return;
+  }
+
+  m_strokeMiterLimit = newLimit;
+  emit strokeMiterLimitChanged();
+}
+
+ChartEnums::StrokePattern LineSeries::strokePattern() const {
+  return m_strokePattern;
+}
+
+void LineSeries::setStrokePattern(ChartEnums::StrokePattern newPattern) {
+  if (m_strokePattern == newPattern) {
+    return;
+  }
+
+  m_strokePattern = newPattern;
+  emit strokePatternChanged();
+}
+
 bool LineSeries::markerVisible() const { return m_markerVisible; }
 
 void LineSeries::setMarkerVisible(bool visible) {
@@ -50,17 +74,6 @@ void LineSeries::setMarkerColor(const QColor &color) {
 
   m_markerColor = color;
   emit markerColorChanged();
-}
-
-float LineSeries::markerRadius() const { return m_markerRadius; }
-
-void LineSeries::setMarkerRadius(float radius) {
-  if (m_markerRadius == radius) {
-    return;
-  }
-
-  m_markerRadius = radius;
-  emit markerRadiusChanged();
 }
 
 float LineSeries::antialias() const { return m_antialias; }
