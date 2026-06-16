@@ -67,7 +67,7 @@ signals:
 
 private:
   QColor m_strokeColor = QColor("#ff3333");
-  float m_strokeWidth = 1.0f;
+  float m_strokeWidth = 5.0f;
   float m_strokeMiterLimit = 4.0f;
   ChartEnums::StrokePattern m_strokePattern = ChartEnums::StrokePattern::Solid;
 

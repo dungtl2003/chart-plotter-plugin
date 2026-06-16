@@ -9,7 +9,7 @@
 
 namespace ChartPlotter {
 
-struct StrokeVertex {
+struct AxisStrokeVertex {
   QVector2D position;
 };
 struct TextVertex {
@@ -55,8 +55,8 @@ private:
   QHash<QString, LabelTexture> m_labelTextureCache;
   QFont m_labelFont;
 
-  QVector<StrokeVertex> m_axisAndTickVertices;
-  QVector<StrokeVertex> m_gridVertices;
+  QVector<AxisStrokeVertex> m_axisAndTickVertices;
+  QVector<AxisStrokeVertex> m_gridVertices;
 
   LabelTexture acquireLabelTexture(const QString &text,
                                    QOpenGLExtraFunctions *f, float dpr);
@@ -65,10 +65,10 @@ private:
 
   void buildAxisAndTickVertices(const ChartRenderContext &context,
                                 const QVector<Tick> &ticks);
-  void buildAxisVertices(QVector<StrokeVertex> &out,
+  void buildAxisVertices(QVector<AxisStrokeVertex> &out,
                          const QVector2D &firstPoint,
                          const QVector2D &lastPoint);
-  void buildTickVertices(QVector<StrokeVertex> &out,
+  void buildTickVertices(QVector<AxisStrokeVertex> &out,
                          const QVector<Tick> &ticks);
   void buildGridVertices(const ChartRenderContext &context,
                          const QVector<Tick> &ticks);
@@ -77,10 +77,10 @@ private:
                           float dpr);
 
   void uploadStrokeVertices(QOpenGLExtraFunctions *f,
-                            const QVector<StrokeVertex> &vertices);
+                            const QVector<AxisStrokeVertex> &vertices);
 
   void drawStrokesAsTriangles(QOpenGLExtraFunctions *f,
-                              const QVector<StrokeVertex> &vertices);
+                              const QVector<AxisStrokeVertex> &vertices);
   void drawLabels(QOpenGLExtraFunctions *f, const QMatrix4x4 &mvp,
                   const QColor &color);
 

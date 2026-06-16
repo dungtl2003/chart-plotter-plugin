@@ -43,17 +43,16 @@ Window {
         //         }
         //     ]
         // }
-        // LineSeries {
-        //     source: dataSrc
-        //     // x: "time"
-        //     // y: "temperature"
-        //     xColumn: 0
-        //     yColumn: 1
-        //     strokeWidth: 5
-        //     strokeMiterLimit: 2
-        //     strokePattern: ChartEnums.StrokePattern.Dash
-        //     antialias: 1
-        // }
+        LineSeries {
+            source: dataSrc
+            // x: "time"
+            // y: "temperature"
+            xColumn: 0
+            yColumn: 1
+            strokeWidth: 5
+            strokePattern: ChartEnums.StrokePattern.Dash
+            antialias: 2
+        }
         LineSeries {
             source: dataSrc
             // x: "time"
@@ -62,26 +61,32 @@ Window {
             yColumn: 2
             strokeColor: "#000000"
             strokeWidth: 5
+            antialias: 2
             // markerVisible: true
         }
-        // LineSeries {
-        //     source: dataSrc
-        //     // x: "time"
-        //     // y: "temperature"
-        //     xColumn: 0
-        //     yColumn: 3
-        //     strokeColor: "#9a3d48"
-        //     strokePattern: ChartEnums.StrokePattern.Dot
-        //     strokeWidth: 5
-        // }
-        // LineSeries {
-        //     source: dataSrc
-        //     // x: "time"
-        //     // y: "temperature"
-        //     xColumn: 0
-        //     yColumn: 3
-        //     strokeColor: "#00FFFF"
-        // }
+        LineSeries {
+            source: dataSrc
+            // x: "time"
+            // y: "temperature"
+            xColumn: 0
+            yColumn: 3
+            strokeColor: "#9a3d48"
+            strokePattern: ChartEnums.StrokePattern.Dot
+            strokeWidth: 5
+            antialias: 2
+        }
+        LineSeries {
+            source: dataSrc
+            // x: "time"
+            // y: "temperature"
+            xColumn: 0
+            yColumn: 4
+            strokeColor: "#ea72b9"
+            markerColor: "#a55555"
+            markerVisible: true
+            strokeWidth: 5
+            antialias: 2
+        }
         // BarSeries {}
 
         name: "iloveyou"

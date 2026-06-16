@@ -14,8 +14,9 @@ namespace {
 
 float calculateTickLength(float axisWidth) { return axisWidth * 4.0f; }
 
-void appendStrokeQuad(QVector<StrokeVertex> &outVertices, const QVector2D &p0,
-                      const QVector2D &p1, float halfWidth) {
+void appendStrokeQuad(QVector<AxisStrokeVertex> &outVertices,
+                      const QVector2D &p0, const QVector2D &p1,
+                      float halfWidth) {
   QVector2D dir = p1 - p0;
 
   if (dir.lengthSquared() <= 0.0001f) {
@@ -26,10 +27,10 @@ void appendStrokeQuad(QVector<StrokeVertex> &outVertices, const QVector2D &p0,
 
   const QVector2D n(-dir.y(), dir.x());
 
-  const StrokeVertex v0{p0 - n * halfWidth};
-  const StrokeVertex v1{p0 + n * halfWidth};
-  const StrokeVertex v2{p1 - n * halfWidth};
-  const StrokeVertex v3{p1 + n * halfWidth};
+  const AxisStrokeVertex v0{p0 - n * halfWidth};
+  const AxisStrokeVertex v1{p0 + n * halfWidth};
+  const AxisStrokeVertex v2{p1 - n * halfWidth};
+  const AxisStrokeVertex v3{p1 + n * halfWidth};
 
   RenderMath::appendQuad(outVertices, v0, v1, v2, v3);
 }
@@ -135,11 +136,11 @@ void OpenGLValueAxisRenderer::render(const ChartRenderContext &context) {
   bindStrokeProgram(mvp, axisData->color.lighter(125));
   drawStrokesAsTriangles(f, m_gridVertices);
 
-  drawLabels(f, mvp, axisData->color);
-
   uploadStrokeVertices(f, m_axisAndTickVertices);
   bindStrokeProgram(mvp, axisData->color);
   drawStrokesAsTriangles(f, m_axisAndTickVertices);
+
+  drawLabels(f, mvp, axisData->color);
 
   m_strokeProgram->release();
 }
@@ -222,7 +223,7 @@ void OpenGLValueAxisRenderer::buildAxisAndTickVertices(
   buildTickVertices(m_axisAndTickVertices, ticks);
 }
 
-void OpenGLValueAxisRenderer::buildAxisVertices(QVector<StrokeVertex> &out,
+void OpenGLValueAxisRenderer::buildAxisVertices(QVector<AxisStrokeVertex> &out,
                                                 const QVector2D &firstPoint,
                                                 const QVector2D &lastPoint) {
   assert(m_data != nullptr);
@@ -232,7 +233,7 @@ void OpenGLValueAxisRenderer::buildAxisVertices(QVector<StrokeVertex> &out,
   appendStrokeQuad(out, firstPoint, lastPoint, halfWidth);
 }
 
-void OpenGLValueAxisRenderer::buildTickVertices(QVector<StrokeVertex> &out,
+void OpenGLValueAxisRenderer::buildTickVertices(QVector<AxisStrokeVertex> &out,
                                                 const QVector<Tick> &ticks) {
   assert(m_data != nullptr);
   const auto &axisData = m_data.get();
@@ -361,19 +362,19 @@ void OpenGLValueAxisRenderer::buildLabelVertices(
 }
 
 void OpenGLValueAxisRenderer::uploadStrokeVertices(
-    QOpenGLExtraFunctions *f, const QVector<StrokeVertex> &vertices) {
+    QOpenGLExtraFunctions *f, const QVector<AxisStrokeVertex> &vertices) {
   f->glBindBuffer(GL_ARRAY_BUFFER, m_strokeVbo);
 
   f->glBufferData(
       GL_ARRAY_BUFFER,
-      static_cast<GLsizeiptr>(vertices.size() * sizeof(StrokeVertex)),
+      static_cast<GLsizeiptr>(vertices.size() * sizeof(AxisStrokeVertex)),
       vertices.data(), GL_DYNAMIC_DRAW);
 
   f->glBindBuffer(GL_ARRAY_BUFFER, 0);
 }
 
 void OpenGLValueAxisRenderer::drawStrokesAsTriangles(
-    QOpenGLExtraFunctions *f, const QVector<StrokeVertex> &vertices) {
+    QOpenGLExtraFunctions *f, const QVector<AxisStrokeVertex> &vertices) {
   if (vertices.empty()) {
     return;
   }
@@ -386,8 +387,9 @@ void OpenGLValueAxisRenderer::drawStrokesAsTriangles(
 void OpenGLValueAxisRenderer::drawLabels(QOpenGLExtraFunctions *f,
                                          const QMatrix4x4 &mvp,
                                          const QColor &color) {
-  if (m_labelVertices.isEmpty() || !m_textProgram)
+  if (m_labelVertices.isEmpty() || !m_textProgram) {
     return;
+  }
 
   f->glBindBuffer(GL_ARRAY_BUFFER, m_textVbo);
   f->glBufferData(
@@ -414,8 +416,9 @@ void OpenGLValueAxisRenderer::drawLabels(QOpenGLExtraFunctions *f,
   f->glBindVertexArray(0);
   f->glBindTexture(GL_TEXTURE_2D, 0);
 
-  if (!blendWasOn)
+  if (!blendWasOn) {
     f->glDisable(GL_BLEND);
+  }
   m_textProgram->release();
 }
 
@@ -439,8 +442,8 @@ void OpenGLValueAxisRenderer::initializeStrokeGeometry(
 
   f->glEnableVertexAttribArray(0);
   f->glVertexAttribPointer(
-      0, 2, GL_FLOAT, GL_FALSE, sizeof(StrokeVertex),
-      reinterpret_cast<void *>(offsetof(StrokeVertex, position)));
+      0, 2, GL_FLOAT, GL_FALSE, sizeof(AxisStrokeVertex),
+      reinterpret_cast<void *>(offsetof(AxisStrokeVertex, position)));
 
   f->glBindBuffer(GL_ARRAY_BUFFER, 0);
   f->glBindVertexArray(0);

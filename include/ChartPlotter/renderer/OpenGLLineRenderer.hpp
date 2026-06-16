@@ -14,8 +14,10 @@ struct DashRun {
   QVector<QVector2D> points;
 };
 
-struct StrokeVertex {
-  QVector2D position;
+struct LineStrokeVertex {
+  QVector2D position; // expanded quad corner (screen space)
+  QVector2D p0;       // capsule segment start (screen space)
+  QVector2D p1;       // capsule segment end   (screen space)
 };
 
 struct MarkerSdfVertex {
@@ -41,19 +43,16 @@ private:
   GLuint m_markerVbo = 0;
   std::unique_ptr<LineRenderData> m_data;
 
-  QVector<StrokeVertex> m_strokeVertices;
+  QVector<LineStrokeVertex> m_strokeVertices;
   QVector<MarkerSdfVertex> m_markerVertices;
 
   void buildStrokeVertices(const QVector<QVector2D> &points);
-  void buildSolidStrokeVertices(const QVector<QVector2D> &points);
+  void buildSolidStrokeVertices(const QVector<QVector2D> &points,
+                                QVector<LineStrokeVertex> &outVertices);
   void buildDashedStrokeVertices(const QVector<QVector2D> &points,
-                                 QVector<StrokeVertex> &outVertices);
+                                 QVector<LineStrokeVertex> &outVertices);
   void buildDottedStrokeVertices(const QVector<QVector2D> &points,
-                                 QVector<StrokeVertex> &outVertices);
-  void buildSegmentVertices(const QVector<QVector2D> &points,
-                            QVector<StrokeVertex> &outVertices);
-  void buildMiterJoinVertices(const QVector<QVector2D> &points,
-                              QVector<StrokeVertex> &outVertices);
+                                 QVector<LineStrokeVertex> &outVertices);
   void buildMarkerVertices(const QVector<QVector2D> &points);
 
   void uploadStrokeVertices(QOpenGLExtraFunctions *f);

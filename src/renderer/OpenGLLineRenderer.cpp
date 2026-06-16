@@ -9,6 +9,39 @@ namespace {
 
 constexpr int MarkerSegments = 32;
 
+// Builds an oriented quad that fully covers the capsule (segment + radius),
+// extended along the segment by coverRadius at both ends for round caps.
+// Each corner carries the true (p0, p1) so the fragment shader can measure
+// distance to the centerline. p0 == p1 yields a square -> the SDF becomes a
+// disc.
+void appendCapsule(QVector<LineStrokeVertex> &out, const QVector2D &p0,
+                   const QVector2D &p1, float coverRadius) {
+  QVector2D delta = p1 - p0;
+
+  QVector2D dir;
+  if (delta.lengthSquared() <= RenderMath::Epsilon * RenderMath::Epsilon) {
+    dir =
+        QVector2D(1.0f, 0.0f); // degenerate (dot): any orthonormal basis works
+  } else {
+    dir = delta.normalized();
+  }
+
+  const QVector2D n(-dir.y(), dir.x());
+  const QVector2D ext = dir * coverRadius; // along-axis extension (caps)
+  const QVector2D off = n * coverRadius;   // perpendicular extension
+
+  const QVector2D a = p0 - ext;
+  const QVector2D b = p1 + ext;
+
+  // Same corner roles as the old appendStrokeQuad, so winding is unchanged.
+  const LineStrokeVertex c0{a - off, p0, p1};
+  const LineStrokeVertex c1{a + off, p0, p1};
+  const LineStrokeVertex c2{b - off, p0, p1};
+  const LineStrokeVertex c3{b + off, p0, p1};
+
+  RenderMath::appendQuad(out, c0, c1, c2, c3);
+}
+
 void appendUniquePoint(QVector<QVector2D> &pts, const QVector2D &p) {
   if (pts.isEmpty() || !RenderMath::nearlyEqual(pts.back(), p)) {
     pts.push_back(p);
@@ -28,8 +61,9 @@ QPointF mapDataToItem(const QPointF &point, const ValueAxisRange &xRange,
   return QPointF(x, y);
 }
 
-void appendStrokeQuad(QVector<StrokeVertex> &outVertices, const QVector2D &p0,
-                      const QVector2D &p1, float halfWidth) {
+void appendStrokeQuad(QVector<LineStrokeVertex> &outVertices,
+                      const QVector2D &p0, const QVector2D &p1,
+                      float halfWidth) {
   QVector2D dir = p1 - p0;
 
   if (dir.lengthSquared() <= 0.0001f) {
@@ -40,15 +74,15 @@ void appendStrokeQuad(QVector<StrokeVertex> &outVertices, const QVector2D &p0,
 
   const QVector2D n(-dir.y(), dir.x());
 
-  const StrokeVertex v0{p0 - n * halfWidth};
-  const StrokeVertex v1{p0 + n * halfWidth};
-  const StrokeVertex v2{p1 - n * halfWidth};
-  const StrokeVertex v3{p1 + n * halfWidth};
+  const LineStrokeVertex v0{p0 - n * halfWidth};
+  const LineStrokeVertex v1{p0 + n * halfWidth};
+  const LineStrokeVertex v2{p1 - n * halfWidth};
+  const LineStrokeVertex v3{p1 + n * halfWidth};
 
   RenderMath::appendQuad(outVertices, v0, v1, v2, v3);
 }
 
-void appendStrokeCircle(QVector<StrokeVertex> &outVertices,
+void appendStrokeCircle(QVector<LineStrokeVertex> &outVertices,
                         const QVector2D &center, float radius) {
   if (radius <= RenderMath::Epsilon) {
     return;
@@ -69,14 +103,15 @@ void appendStrokeCircle(QVector<StrokeVertex> &outVertices,
     const QVector2D p2 =
         center + QVector2D(std::cos(a1) * radius, std::sin(a1) * radius);
 
-    RenderMath::appendTriangle(outVertices, StrokeVertex{p0}, StrokeVertex{p1},
-                               StrokeVertex{p2});
+    RenderMath::appendTriangle(outVertices, LineStrokeVertex{p0},
+                               LineStrokeVertex{p1}, LineStrokeVertex{p2});
   }
 }
 
 QVector<DashRun> buildDashRuns(const QVector<QVector2D> &points,
                                float dashLength, float gapLength) {
   QVector<DashRun> runs;
+  // CP_DEBUG("gapLength = {}", gapLength);
 
   if (points.size() < 2) {
     return runs;
@@ -241,20 +276,16 @@ void OpenGLLineRenderer::setData(std::unique_ptr<RenderData> data) {
 
 void OpenGLLineRenderer::buildStrokeVertices(const QVector<QVector2D> &points) {
   assert(m_data != nullptr);
-  const auto &lineData = m_data.get();
-
   m_strokeVertices.clear();
 
+  const auto *lineData = m_data.get();
   switch (lineData->stroke.pattern) {
   case ChartEnums::StrokePattern::Solid:
-    buildSegmentVertices(points, m_strokeVertices);
-    buildMiterJoinVertices(points, m_strokeVertices);
+    buildSolidStrokeVertices(points, m_strokeVertices);
     break;
-
   case ChartEnums::StrokePattern::Dash:
     buildDashedStrokeVertices(points, m_strokeVertices);
     break;
-
   case ChartEnums::StrokePattern::Dot:
     buildDottedStrokeVertices(points, m_strokeVertices);
     break;
@@ -262,37 +293,46 @@ void OpenGLLineRenderer::buildStrokeVertices(const QVector<QVector2D> &points) {
 }
 
 void OpenGLLineRenderer::buildSolidStrokeVertices(
-    const QVector<QVector2D> &points) {
-  m_strokeVertices.clear();
+    const QVector<QVector2D> &points, QVector<LineStrokeVertex> &outVertices) {
+  assert(m_data != nullptr);
+  if (points.size() < 2) {
+    return;
+  }
 
-  buildSegmentVertices(points, m_strokeVertices);
-  buildMiterJoinVertices(points, m_strokeVertices);
+  const auto *lineData = m_data.get();
+  const float halfWidth = lineData->stroke.width * 0.5f;
+  const float coverRadius = halfWidth + lineData->antialias + 1.0f;
+
+  for (int i = 0; i + 1 < points.size(); ++i) {
+    appendCapsule(outVertices, points[i], points[i + 1], coverRadius);
+  }
 }
 
 void OpenGLLineRenderer::buildDashedStrokeVertices(
-    const QVector<QVector2D> &points, QVector<StrokeVertex> &outVertices) {
+    const QVector<QVector2D> &points, QVector<LineStrokeVertex> &outVertices) {
   assert(m_data != nullptr);
-  const auto &lineData = m_data.get();
+  const auto *lineData = m_data.get();
 
-  const float dashLength = lineData->stroke.dashStyle.length;
-  const float gapLength = lineData->stroke.dashStyle.gap;
+  const float dashLength =
+      lineData->stroke.dashStyle.length - lineData->stroke.width;
+  // shader will add more length than normal (2 * halfWidth)
+  const float gapLength =
+      lineData->stroke.dashStyle.gap + lineData->stroke.width;
+  const float halfWidth = lineData->stroke.width * 0.5f;
+  const float coverRadius = halfWidth + lineData->antialias + 1.0f;
 
-  QVector<DashRun> runs = buildDashRuns(points, dashLength, gapLength);
-
+  const QVector<DashRun> runs = buildDashRuns(points, dashLength, gapLength);
   for (const DashRun &run : runs) {
-    if (run.points.size() < 2) {
-      continue;
+    for (int i = 0; i + 1 < run.points.size(); ++i) {
+      appendCapsule(outVertices, run.points[i], run.points[i + 1], coverRadius);
     }
-
-    buildSegmentVertices(run.points, outVertices);
-    buildMiterJoinVertices(run.points, outVertices);
   }
 }
 
 void OpenGLLineRenderer::buildDottedStrokeVertices(
-    const QVector<QVector2D> &points, QVector<StrokeVertex> &outVertices) {
+    const QVector<QVector2D> &points, QVector<LineStrokeVertex> &outVertices) {
   assert(m_data != nullptr);
-  const auto &lineData = m_data.get();
+  const auto *lineData = m_data.get();
 
   if (points.size() < 2) {
     return;
@@ -301,6 +341,7 @@ void OpenGLLineRenderer::buildDottedStrokeVertices(
   const float radius = lineData->stroke.width * 0.5f;
   const float gap = lineData->stroke.dotStyle.gap;
   const float stepLength = radius * 2.0f + gap;
+  const float coverRadius = radius + lineData->antialias + 1.0f;
 
   if (radius <= RenderMath::Epsilon || stepLength <= RenderMath::Epsilon) {
     return;
@@ -313,7 +354,7 @@ void OpenGLLineRenderer::buildDottedStrokeVertices(
     const QVector2D segmentStart = points[i];
     const QVector2D segmentEnd = points[i + 1];
 
-    QVector2D segment = segmentEnd - segmentStart;
+    const QVector2D segment = segmentEnd - segmentStart;
     const float segmentLength = segment.length();
 
     if (segmentLength <= RenderMath::Epsilon) {
@@ -329,102 +370,13 @@ void OpenGLLineRenderer::buildDottedStrokeVertices(
         const QVector2D center =
             RenderMath::lerpPoint(segmentStart, segmentEnd, t);
 
-        appendStrokeCircle(outVertices, center, radius);
+        appendCapsule(outVertices, center, center, coverRadius); // -> disc
       }
 
       nextDotDistance += stepLength;
     }
 
     distanceAlongPolyline += segmentLength;
-  }
-}
-
-// Quad Extend
-void OpenGLLineRenderer::buildSegmentVertices(
-    const QVector<QVector2D> &points, QVector<StrokeVertex> &outVertices) {
-  assert(m_data != nullptr);
-  const auto &lineData = m_data.get();
-
-  if (points.size() < 2) {
-    return;
-  }
-
-  const float halfWidth = lineData->stroke.width * 0.5f;
-
-  for (std::size_t i = 0; i + 1 < points.size(); ++i) {
-    appendStrokeQuad(outVertices, points[i], points[i + 1], halfWidth);
-  }
-}
-
-void OpenGLLineRenderer::buildMiterJoinVertices(
-    const QVector<QVector2D> &points, QVector<StrokeVertex> &outVertices) {
-  assert(m_data != nullptr);
-  const auto &lineData = m_data.get();
-
-  if (points.size() < 3) {
-    return;
-  }
-
-  const float halfWidth = lineData->stroke.width * 0.5f;
-
-  for (std::size_t i = 1; i + 1 < points.size(); ++i) {
-    QVector2D p0 = points[i - 1];
-    QVector2D p1 = points[i];
-    QVector2D p2 = points[i + 1];
-
-    QVector2D dirA = p1 - p0;
-    QVector2D dirB = p2 - p1;
-
-    if (dirA.lengthSquared() <= 0.0001f || dirB.lengthSquared() <= 0.0001f) {
-      continue;
-    }
-
-    dirA.normalize();
-    dirB.normalize();
-
-    float turn = RenderMath::cross2D(dirA, dirB);
-
-    if (std::abs(turn) <= 0.0001f) {
-      continue;
-    }
-
-    QVector2D normalA = RenderMath::perpendicularLeft(dirA);
-    QVector2D normalB = RenderMath::perpendicularLeft(dirB);
-
-    QVector2D sideA;
-    QVector2D sideB;
-
-    // For Qt y-down setup.
-    if (turn > 0.0f) {
-      sideA = -normalA;
-      sideB = -normalB;
-    } else {
-      sideA = normalA;
-      sideB = normalB;
-    }
-
-    QVector2D edgeA = p1 + sideA * halfWidth;
-    QVector2D edgeB = p1 + sideB * halfWidth;
-
-    QVector2D miterPoint;
-
-    bool ok =
-        RenderMath::lineIntersection(edgeA, dirA, edgeB, dirB, miterPoint);
-
-    if (!ok) {
-      continue;
-    }
-
-    float miterLength = (miterPoint - p1).length();
-    bool useMiter = (miterLength / halfWidth) <= lineData->stroke.miterLimit &&
-                    !lineData->marker.visible;
-
-    if (useMiter) {
-      RenderMath::appendQuad(outVertices, StrokeVertex{edgeA}, StrokeVertex{p1},
-                             StrokeVertex{miterPoint}, StrokeVertex{edgeB});
-    } else {
-      RenderMath::appendTriangle(outVertices, {p1}, {edgeA}, {edgeB});
-    }
   }
 }
 
@@ -454,10 +406,10 @@ void OpenGLLineRenderer::buildMarkerVertices(const QVector<QVector2D> &points) {
 void OpenGLLineRenderer::uploadStrokeVertices(QOpenGLExtraFunctions *f) {
   f->glBindBuffer(GL_ARRAY_BUFFER, m_strokeVbo);
 
-  f->glBufferData(
-      GL_ARRAY_BUFFER,
-      static_cast<GLsizeiptr>(m_strokeVertices.size() * sizeof(StrokeVertex)),
-      m_strokeVertices.data(), GL_DYNAMIC_DRAW);
+  f->glBufferData(GL_ARRAY_BUFFER,
+                  static_cast<GLsizeiptr>(m_strokeVertices.size() *
+                                          sizeof(LineStrokeVertex)),
+                  m_strokeVertices.data(), GL_DYNAMIC_DRAW);
 
   f->glBindBuffer(GL_ARRAY_BUFFER, 0);
 }
@@ -527,8 +479,18 @@ void OpenGLLineRenderer::initializeStrokeGeometry(QOpenGLExtraFunctions *f) {
 
   f->glEnableVertexAttribArray(0);
   f->glVertexAttribPointer(
-      0, 2, GL_FLOAT, GL_FALSE, sizeof(StrokeVertex),
-      reinterpret_cast<void *>(offsetof(StrokeVertex, position)));
+      0, 2, GL_FLOAT, GL_FALSE, sizeof(LineStrokeVertex),
+      reinterpret_cast<void *>(offsetof(LineStrokeVertex, position)));
+
+  f->glEnableVertexAttribArray(1);
+  f->glVertexAttribPointer(
+      1, 2, GL_FLOAT, GL_FALSE, sizeof(LineStrokeVertex),
+      reinterpret_cast<void *>(offsetof(LineStrokeVertex, p0)));
+
+  f->glEnableVertexAttribArray(2);
+  f->glVertexAttribPointer(
+      2, 2, GL_FLOAT, GL_FALSE, sizeof(LineStrokeVertex),
+      reinterpret_cast<void *>(offsetof(LineStrokeVertex, p1)));
 
   f->glBindBuffer(GL_ARRAY_BUFFER, 0);
   f->glBindVertexArray(0);

@@ -8,17 +8,17 @@
 namespace ChartPlotter {
 
 struct DotStyle {
-  float gap = 1.0f;
+  float gap = 5.0f;
 };
 
 struct DashStyle {
-  float length = 1.0f;
-  float gap = 1.0f;
+  float length = 5.0f;
+  float gap = 5.0f;
 };
 
 struct Stroke {
   QColor color = QColor("#ff3333");
-  float width = 1.0f;
+  float width = 5.0f;
   float miterLimit = 4.0f;
   ChartEnums::StrokePattern pattern = ChartEnums::StrokePattern::Solid;
   DashStyle dashStyle;
