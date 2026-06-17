@@ -24,13 +24,20 @@ bool GeneralConfig::operator!=(const GeneralConfig &other) const {
 ChartView::ChartView(QQuickItem *parent) : QQuickItem(parent) {
   setFlag(ItemHasContents, true);
 
+  m_dataManagerPool = new DataManagerPool(parent);
   m_name = QString::fromStdString(appendUniqueId("ChartView_EarlyInit_"));
   m_logger = LoggerManager::createInstanceLogger(m_name.toStdString());
+  connect(m_dataManagerPool, &DataManagerPool::errorOccurred, this,
+          &ChartView::onDataError, Qt::QueuedConnection);
+  connect(
+      m_dataManagerPool, &DataManagerPool::snapshotReady, this,
+      [this](int id, const DataSnapshot &snapshot) {
+        onSnapshotReady(id, snapshot);
+      },
+      Qt::QueuedConnection);
 }
 
 ChartView::~ChartView() {
-  shutdownDataManagers();
-
   if (m_logger) {
     dropLogger();
   }
@@ -48,7 +55,9 @@ void ChartView::componentComplete() {
   }
 
   for (auto source : m_sources) {
-    createDataManager(source);
+    if (m_dataManagerPool) {
+      m_dataManagerPool->createDataManager(source);
+    }
   }
 }
 
@@ -133,97 +142,13 @@ void ChartView::appendContent(QQmlListProperty<QObject> *property,
   }
 }
 
-QPointer<DataManager>
-ChartView::createDataManager(const QPointer<DataSource> source) {
-  const int id = m_nextSourceId++;
-
-  m_sourceIds.insert(source.data(), id);
-
-  QPointer<QThread> thread = new QThread(this);
-
-  QPointer<DataManager> manager = new DataManager();
-  manager->setDataReadConfig(std::move(source->exportConfig()));
-  manager->moveToThread(thread);
-
-  connect(thread, &QThread::started, manager, &DataManager::start);
-  connect(thread, &QThread::finished, manager, &QObject::deleteLater);
-  connect(thread, &QThread::finished, this, [this, manager, thread]() {
-    this->shutdownDataManager(manager, thread);
-  });
-  connect(manager, &DataManager::errorOccurred, this, &ChartView::onDataError,
-          Qt::QueuedConnection);
-  connect(
-      manager, &DataManager::snapshotReady, this,
-      [this, id](const DataSnapshot &snapshot) {
-        onSnapshotReady(id, snapshot);
-      },
-      Qt::QueuedConnection);
-  connect(manager, &DataManager::finished, thread, &QThread::quit,
-          Qt::QueuedConnection);
-
-  m_dataManagers.push_back({id, thread, manager});
-
-  thread->start();
-
-  return manager;
-}
-
-void ChartView::stopDataManager(int id) {
-  for (DataManagerRuntime &runtime : m_dataManagers) {
-    if (runtime.id != id) {
-      continue;
-    }
-
-    if (runtime.manager) {
-      QMetaObject::invokeMethod(runtime.manager, "stop",
-                                Qt::BlockingQueuedConnection);
-    }
-
-    return;
-  }
-}
-
-void ChartView::shutdownDataManagers() {
-  for (DataManagerRuntime &runtime : m_dataManagers) {
-    if (!runtime.manager) {
-      continue;
-    }
-
-    QPointer<DataManager> manager = runtime.manager;
-    QMetaObject::invokeMethod(manager, "stop", Qt::BlockingQueuedConnection);
-
-    if (runtime.thread) {
-      runtime.thread->quit();
-      runtime.thread->wait();
-    }
-
-    runtime.manager = nullptr;
-    runtime.thread = nullptr;
-  }
-
-  m_dataManagers.clear();
-}
-
-void ChartView::shutdownDataManager(QPointer<DataManager> manager,
-                                    QPointer<QThread> thread) {
-  for (auto &runtime : m_dataManagers) {
-    if (runtime.manager == manager) {
-      runtime.manager = nullptr;
-      runtime.thread = nullptr;
-      break;
-    }
-  }
-
-  thread->deleteLater();
-}
-
 // TODO: handle xy series for now
 bool ChartView::rebuildRenderPackage() {
-  assert(m_plan.valid);
+  assert(m_plan.valid && m_dataManagerPool);
 
   m_resolvedSeries = m_seriesDataResolver.resolve(
-      m_plan.xySeriesIndexes, m_plan.pieSeriesIndexes, m_series, m_sourceIds,
-      m_snapshots);
+      m_plan.xySeriesIndexes, m_plan.pieSeriesIndexes, m_series,
+      m_dataManagerPool->sourceIds(), m_snapshots);
 
   if (!m_resolvedSeries.valid) {
     m_logger->warn("ChartView::rebuildRenderPackage: {}",
@@ -546,7 +471,9 @@ void ChartView::clearContent(QQmlListProperty<QObject> *property) {
   chartView->m_content.clear();
   chartView->m_sources.clear();
   chartView->m_series.clear();
-  chartView->m_dataManagers.clear();
+  if (chartView->m_dataManagerPool) {
+    chartView->m_dataManagerPool->shutdownDataManagers();
+  }
 }
 
 QString ChartView::name() const { return m_name; }

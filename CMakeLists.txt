@@ -125,6 +125,7 @@ set(CHARTPLOTTER_HEADERS
     include/ChartPlotter/data/DataBuffer.hpp
     include/ChartPlotter/data/DataBufferUpdater.hpp
     include/ChartPlotter/data/DataManager.hpp
+    include/ChartPlotter/data/DataManagerPool.hpp
     include/ChartPlotter/data/DataReadConfig.hpp
     include/ChartPlotter/data/DataRange.hpp
 
@@ -182,6 +183,7 @@ set(CHARTPLOTTER_SOURCES
     src/data/DataBuffer.cpp
     src/data/DataBufferUpdater.cpp
     src/data/DataManager.cpp
+    src/data/DataManagerPool.cpp
     src/data/DataRange.cpp
 
     src/data/reader/AbstractDataReader.cpp

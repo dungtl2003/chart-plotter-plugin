@@ -2,7 +2,7 @@
 
 #include "ChartPlotter/ChartLayoutPlanner.hpp"
 #include "ChartPlotter/data/DataBuffer.hpp"
-#include "ChartPlotter/data/DataManager.hpp"
+#include "ChartPlotter/data/DataManagerPool.hpp"
 #include "ChartPlotter/data/DataSource.hpp"
 #include "ChartPlotter/data/RenderData.hpp"
 #include "ChartPlotter/renderer/IOpenGLRenderer.hpp"
@@ -17,12 +17,6 @@
 #include <memory>
 
 namespace ChartPlotter {
-
-struct DataManagerRuntime {
-  int id = -1;
-  QPointer<QThread> thread = nullptr;
-  QPointer<DataManager> manager = nullptr;
-};
 
 class GeneralConfig {
   Q_GADGET
@@ -77,18 +71,15 @@ public slots:
 signals:
   void nameChanged();
   void generalConfigChanged();
-  void stopDataManagerRequested(int id);
 
 private:
-  QHash<DataSource *, int> m_sourceIds;
+  QPointer<DataManagerPool> m_dataManagerPool = nullptr;
   QHash<int, DataSnapshot> m_snapshots;
   QList<QPointer<QObject>> m_content;
   QVector<QPointer<AbstractSeries>> m_series;
   QVector<QPointer<DataSource>> m_sources;
-  QVector<DataManagerRuntime> m_dataManagers;
   QString m_name;
   GeneralConfig m_generalConfig;
-  int m_nextSourceId = 0;
   std::vector<std::unique_ptr<ISeriesStrategy>> m_strategies;
   std::shared_ptr<spdlog::logger> m_logger;
   ChartLayoutPlan m_plan;
@@ -100,11 +91,6 @@ private:
   void dropLogger();
   std::string appendUniqueId(std::string s) const;
   void resetStrategies();
-  QPointer<DataManager> createDataManager(const QPointer<DataSource> source);
-  void stopDataManager(int id);
-  void shutdownDataManagers();
-  void shutdownDataManager(QPointer<DataManager> manager,
-                           QPointer<QThread> thread);
   bool rebuildRenderPackage();
   bool rebuildXYSeriesRenderPackage(const SeriesResolveResult &resolvedSeries);
   bool rebuildPieSeriesRenderPackage(const SeriesResolveResult &resolvedSeries);
