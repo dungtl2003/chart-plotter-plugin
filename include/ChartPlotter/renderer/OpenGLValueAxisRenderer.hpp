@@ -62,6 +62,7 @@ private:
                                    QOpenGLExtraFunctions *f, float dpr);
   LabelTexture rasterizeLabel(const QString &text, QOpenGLExtraFunctions *f,
                               float dpr);
+  QVector<Tick> resolveTickAnchors(const QVector<Tick> &ticks) const;
 
   void buildAxisAndTickVertices(const ChartRenderContext &context,
                                 const QVector<Tick> &ticks);

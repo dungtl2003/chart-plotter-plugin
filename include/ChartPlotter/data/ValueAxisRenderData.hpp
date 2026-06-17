@@ -22,6 +22,8 @@ struct AxisTickRenderData {
 struct AxisRenderData : public RenderData {
   QVector<AxisTickRenderData> ticks;
   ChartEnums::AxisPosition pos = ChartEnums::AxisPosition::Left;
+  // AxisRenderData
+  ChartEnums::TickMode tickMode = ChartEnums::TickMode::OnTick;
   QColor color = QColor("#c1c1c1");
   double width = 5.0f;
   int fontSize = 20;

@@ -49,6 +49,11 @@ public:
   };
   Q_DECLARE_FLAGS(AxisPositions, AxisPosition)
 
+  enum class TickMode {
+    OnTick,       // mark + label on each tick (value / line axes)
+    BetweenTicks, // mark + label centered in each gap (bar / category axes)
+  };
+
   enum class AxisType { Value, Category };
 };
 

@@ -202,6 +202,32 @@ OpenGLValueAxisRenderer::acquireLabelTexture(const QString &text,
   return lt;
 }
 
+auto OpenGLValueAxisRenderer::resolveTickAnchors(
+    const QVector<Tick> &ticks) const -> QVector<Tick> {
+  assert(m_data != nullptr);
+  const auto *axisData = m_data.get();
+
+  if (axisData->tickMode == ChartEnums::TickMode::OnTick) {
+    return ticks;
+  }
+
+  // Category / bar axes: incoming positions are band boundaries; the tick
+  // (mark + label) is centered in each gap. tick[i].label labels the gap
+  // between tick[i] and tick[i+1]; the last tick contributes only its position.
+  QVector<Tick> anchors;
+  if (ticks.size() < 2) {
+    return anchors;
+  }
+
+  anchors.reserve(ticks.size() - 1);
+  for (qsizetype i = 0; i + 1 < ticks.size(); ++i) {
+    const QVector2D mid =
+        (ticks.at(i).position + ticks.at(i + 1).position) * 0.5f;
+    anchors.push_back(Tick{.position = mid, .label = ticks.at(i).label});
+  }
+  return anchors;
+}
+
 void OpenGLValueAxisRenderer::buildAxisAndTickVertices(
     const ChartRenderContext &context, const QVector<Tick> &ticks) {
   assert(m_data != nullptr);
@@ -243,16 +269,13 @@ void OpenGLValueAxisRenderer::buildTickVertices(QVector<AxisStrokeVertex> &out,
 
   QVector2D a;
   QVector2D b;
-  for (const auto &tick : ticks) {
-    // CP_DEBUG("tick({}, {})", tickPos.x(), tickPos.y());
-    const auto &tickPos = tick.position;
+  for (const auto &anchor : ticks) {
+    const auto &tickPos = anchor.position;
     if (axisData->pos == ChartEnums::AxisPosition::Bottom ||
         axisData->pos == ChartEnums::AxisPosition::Top) {
-      // Vertical tick
       a = QVector2D(tickPos.x(), tickPos.y() + tickHalfLength);
       b = QVector2D(tickPos.x(), tickPos.y() - tickHalfLength);
     } else {
-      // Horizontal tick
       a = QVector2D(tickPos.x() - tickHalfLength, tickPos.y());
       b = QVector2D(tickPos.x() + tickHalfLength, tickPos.y());
     }
@@ -328,8 +351,9 @@ void OpenGLValueAxisRenderer::buildLabelVertices(
   const float tickHalfLength = calculateTickLength(axisData->width) * 0.5f;
   const float labelGap = 4.0f; // px between tick tip and label
   const float outward = tickHalfLength + labelGap;
+  const QVector<Tick> anchors = resolveTickAnchors(ticks);
 
-  for (const auto &tick : ticks) {
+  for (const auto &tick : anchors) {
     if (tick.label.isEmpty())
       continue;
 
