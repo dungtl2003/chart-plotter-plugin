@@ -49,8 +49,8 @@ void appendTexturedQuad(QVector<TextVertex> &out, const QVector2D &topLeft,
   out.push_back(TextVertex{{x0, y1}, {0.f, 1.f}});
 }
 
-QPointF mapDataToItem(const QPointF &point, const ValueAxisRange &xRange,
-                      const ValueAxisRange &yRange, const QRectF &plotArea) {
+QPointF mapDataToItem(const QPointF &point, const AxisRange &xRange,
+                      const AxisRange &yRange, const QRectF &plotArea) {
   const double nx = RenderMath::normalize(point.x(), xRange.min, xRange.max);
   const double ny = RenderMath::normalize(point.y(), yRange.min, yRange.max);
 
@@ -106,13 +106,13 @@ void OpenGLValueAxisRenderer::render(const ChartRenderContext &context) {
     return;
   }
 
-  ValueAxisRenderData *axisData = m_data.get();
+  AxisRenderData *axisData = m_data.get();
   QOpenGLExtraFunctions *f = context.f;
   const QMatrix4x4 &mvp = context.mvp;
 
   const double halfWidth = axisData->width * 0.5f;
-  const ValueAxisRange xRange = context.xAxisRange;
-  const ValueAxisRange yRange = context.yAxisRange;
+  const AxisRange xRange = context.xAxisRange;
+  const AxisRange yRange = context.yAxisRange;
 
   if (axisData->ticks.size() < 2) {
     return;
@@ -146,11 +146,10 @@ void OpenGLValueAxisRenderer::render(const ChartRenderContext &context) {
 }
 
 void OpenGLValueAxisRenderer::setData(std::unique_ptr<RenderData> data) {
-  if (ValueAxisRenderData *axisData =
-          dynamic_cast<ValueAxisRenderData *>(data.get())) {
+  if (AxisRenderData *axisData = dynamic_cast<AxisRenderData *>(data.get())) {
     auto _ =
         data.release(); // so it does not track and auto remove the data inside
-    m_data = std::unique_ptr<ValueAxisRenderData>(axisData);
+    m_data = std::unique_ptr<AxisRenderData>(axisData);
   }
 };
 
@@ -212,8 +211,8 @@ void OpenGLValueAxisRenderer::buildAxisAndTickVertices(
 
   const auto &firstTick = axisData->ticks.first();
   const auto &lastTick = axisData->ticks.last();
-  const ValueAxisRange xRange = context.xAxisRange;
-  const ValueAxisRange yRange = context.yAxisRange;
+  const AxisRange xRange = context.xAxisRange;
+  const AxisRange yRange = context.yAxisRange;
   QVector2D firstPoint =
       QVector2D(mapDataToItem(firstTick.pos, xRange, yRange, context.plotArea));
   QVector2D lastPoint =

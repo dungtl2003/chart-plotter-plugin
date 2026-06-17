@@ -48,8 +48,8 @@ void appendUniquePoint(QVector<QVector2D> &pts, const QVector2D &p) {
   }
 }
 
-QPointF mapDataToItem(const QPointF &point, const ValueAxisRange &xRange,
-                      const ValueAxisRange &yRange, const QRectF &plotArea) {
+QPointF mapDataToItem(const QPointF &point, const AxisRange &xRange,
+                      const AxisRange &yRange, const QRectF &plotArea) {
   const double nx = RenderMath::normalize(point.x(), xRange.min, xRange.max);
   const double ny = RenderMath::normalize(point.y(), yRange.min, yRange.max);
 
@@ -233,8 +233,8 @@ void OpenGLLineRenderer::render(const ChartRenderContext &context) {
   const QMatrix4x4 &mvp = context.mvp;
 
   const double halfWidth = lineData->stroke.width * 0.5f;
-  const ValueAxisRange xRange = context.xAxisRange;
-  const ValueAxisRange yRange = context.yAxisRange;
+  const AxisRange xRange = context.xAxisRange;
+  const AxisRange yRange = context.yAxisRange;
 
   QVector<QVector2D> points;
   points.reserve(lineData->points.size());

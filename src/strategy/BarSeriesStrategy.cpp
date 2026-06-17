@@ -3,10 +3,9 @@
 
 namespace ChartPlotter {
 
-std::unique_ptr<RenderData>
-BarSeriesStrategy::build(const AbstractSeries &series,
-                         const ResolvedSeriesData &resolved,
-                         const DataSnapshot &snapshot) {
+std::unique_ptr<RenderData> BarSeriesStrategy::build(
+    const AbstractSeries &series, const ResolvedSeriesData &resolved,
+    const DataSnapshot &snapshot, const SeriesBuildContext &context) {
   CP_DEBUG("Building Bar Chart");
   return std::make_unique<XYSeriesRenderData>();
 }

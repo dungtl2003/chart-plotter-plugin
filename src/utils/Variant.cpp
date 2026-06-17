@@ -14,7 +14,7 @@ bool Utils::Variant::isDouble(const QVariant &value) {
 }
 
 bool Utils::Variant::isDate(const QVariant &value) {
-  return value.canConvert<QDate>() || value.canConvert<QDateTime>();
+  return value.toDateTime().isValid() || value.toDate().isValid();
 }
 
 bool Utils::Variant::variantToDouble(const QVariant &value, double &out) {

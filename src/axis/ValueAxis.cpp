@@ -1,5 +1,7 @@
 #include "ChartPlotter/axis/ValueAxis.hpp"
 
+#include <QDateTime>
+
 namespace ChartPlotter {
 
 /**
@@ -47,9 +49,9 @@ double ValueAxis::niceNumber(double value, bool round) {
   return niceFraction * std::pow(10.0, exponent);
 }
 
-ValueAxisTicks ValueAxis::calculateTicks(const ValueAxisRange &range,
-                                         int targetTickCount) {
-  ValueAxisTicks result;
+AxisTicks ValueAxis::calculateTicks(const AxisRange &range, int targetTickCount,
+                                    bool isDateTime) {
+  AxisTicks result;
 
   if (targetTickCount < 2) {
     targetTickCount = 2;
@@ -77,9 +79,13 @@ ValueAxisTicks ValueAxis::calculateTicks(const ValueAxisRange &range,
   // When add double repeately, the final result can be like: 99.99...9999 or
   // 100.000...01, so the final tick can be missed.
   for (double value = tickMin; value <= tickMax + step * 0.5; value += step) {
-    ValueAxisTick tick;
+    AxisTick tick;
     tick.value = value;
-    tick.label = formatTickLabel(value, step);
+    if (!isDateTime) {
+      tick.label = formatTickLabel(value, step);
+    } else {
+      tick.label = QDateTime::fromMSecsSinceEpoch(value).toString("yyyy-MM-dd");
+    }
     result.ticks.append(tick);
   }
 
@@ -101,8 +107,8 @@ QString ValueAxis::formatTickLabel(double value, double step) {
   return QString::number(value, 'f', decimals);
 }
 
-ValueAxisRange ValueAxis::calculateRange(const DataRange &dataRange) {
-  return ValueAxisRange{.min = dataRange.min, .max = dataRange.max};
+AxisRange ValueAxis::calculateRange(const DataRange &dataRange) {
+  return AxisRange{.min = dataRange.min, .max = dataRange.max};
 }
 
 } // namespace ChartPlotter

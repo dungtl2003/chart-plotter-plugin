@@ -1,6 +1,6 @@
 #pragma once
 
-#include "ChartPlotter/axis/ValueAxis.hpp"
+#include "ChartPlotter/axis/Axis.hpp"
 #include "ChartPlotter/data/DataRange.hpp"
 #include "ChartPlotter/types/ChartEnums.hpp"
 
@@ -19,8 +19,8 @@ struct ChartRenderContext {
   DataRange xRange;
   DataRange yRange;
 
-  ValueAxisRange xAxisRange;
-  ValueAxisRange yAxisRange;
+  AxisRange xAxisRange;
+  AxisRange yAxisRange;
 
   ChartEnums::AxisPositions axisPositions;
 };

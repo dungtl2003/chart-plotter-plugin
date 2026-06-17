@@ -24,6 +24,22 @@ struct DataManagerRuntime {
   QPointer<DataManager> manager = nullptr;
 };
 
+class GeneralConfig {
+  Q_GADGET
+
+  Q_PROPERTY(float lineWidth READ lineWidth WRITE setLineWidth)
+
+public:
+  bool operator==(const GeneralConfig &other) const;
+  bool operator!=(const GeneralConfig &other) const;
+
+  float lineWidth() const;
+  void setLineWidth(float newWidth);
+
+private:
+  float m_lineWidth = 5.0f;
+};
+
 class ChartView : public QQuickItem {
   Q_OBJECT
   QML_ELEMENT
@@ -31,6 +47,8 @@ class ChartView : public QQuickItem {
 
   Q_PROPERTY(QQmlListProperty<QObject> content READ content)
   Q_PROPERTY(QString name READ name WRITE setName NOTIFY nameChanged)
+  Q_PROPERTY(ChartPlotter::GeneralConfig generalConfig READ generalConfig WRITE
+                 setGeneralConfig NOTIFY generalConfigChanged)
 
 public:
   using RendererCreator = std::function<std::unique_ptr<IOpenGLRenderer>()>;
@@ -49,12 +67,16 @@ public:
   QString name() const;
   void setName(QString newName);
 
+  GeneralConfig generalConfig() const;
+  void setGeneralConfig(const GeneralConfig &newConfig);
+
 public slots:
   void onDataError(const QString &message);
   void onSnapshotReady(int sourceId, const DataSnapshot &snapshot);
 
 signals:
   void nameChanged();
+  void generalConfigChanged();
   void stopDataManagerRequested(int id);
 
 private:
@@ -65,6 +87,7 @@ private:
   QVector<QPointer<DataSource>> m_sources;
   QVector<DataManagerRuntime> m_dataManagers;
   QString m_name;
+  GeneralConfig m_generalConfig;
   int m_nextSourceId = 0;
   std::vector<std::unique_ptr<ISeriesStrategy>> m_strategies;
   std::shared_ptr<spdlog::logger> m_logger;
@@ -85,6 +108,8 @@ private:
   bool rebuildRenderPackage();
   bool rebuildXYSeriesRenderPackage(const SeriesResolveResult &resolvedSeries);
   bool rebuildPieSeriesRenderPackage(const SeriesResolveResult &resolvedSeries);
+  void buildCategoryAxis(const QVector<ResolvedSeriesData> &xySeries, bool useX,
+                         CategoryAxis &axis) const;
   DataRange unionRange(const DataRange &a, const DataRange &b) const;
   std::vector<std::unique_ptr<IOpenGLRenderer>> createRenderersFromPlan() const;
   static void appendContent(QQmlListProperty<QObject> *property,
@@ -96,3 +121,5 @@ private:
 };
 
 } // namespace ChartPlotter
+
+Q_DECLARE_METATYPE(ChartPlotter::GeneralConfig)

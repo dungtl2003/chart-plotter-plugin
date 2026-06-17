@@ -45,7 +45,7 @@ private:
   std::unique_ptr<QOpenGLShaderProgram> m_strokeProgram;
   GLuint m_strokeVao = 0;
   GLuint m_strokeVbo = 0;
-  std::unique_ptr<ValueAxisRenderData> m_data;
+  std::unique_ptr<AxisRenderData> m_data;
 
   std::unique_ptr<QOpenGLShaderProgram> m_textProgram;
   GLuint m_textVao = 0;

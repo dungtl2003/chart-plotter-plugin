@@ -1,11 +1,18 @@
 #pragma once
 
+#include "ChartPlotter/axis/CategoryAxis.hpp"
 #include "ChartPlotter/data/RenderData.hpp"
 #include "ChartPlotter/series/AbstractSeries.hpp"
 #include "ChartPlotter/series/ResolvedSeriesData.hpp"
 #include "DataBuffer.hpp"
 
 namespace ChartPlotter {
+
+struct SeriesBuildContext {
+  // Non-null only when the corresponding axis is categorical (String).
+  const CategoryAxis *xCategories = nullptr;
+  const CategoryAxis *yCategories = nullptr; // reserved for categorical y
+};
 
 class ISeriesStrategy {
 public:
@@ -17,9 +24,9 @@ public:
   ISeriesStrategy &operator=(ISeriesStrategy &&) = delete;
   virtual ~ISeriesStrategy() = default;
 
-  virtual std::unique_ptr<RenderData> build(const AbstractSeries &series,
-                                            const ResolvedSeriesData &resolved,
-                                            const DataSnapshot &snapshot) = 0;
+  virtual std::unique_ptr<RenderData>
+  build(const AbstractSeries &series, const ResolvedSeriesData &resolved,
+        const DataSnapshot &snapshot, const SeriesBuildContext &context) = 0;
 };
 
 } // namespace ChartPlotter

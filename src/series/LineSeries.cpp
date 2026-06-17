@@ -21,25 +21,7 @@ void LineSeries::setStrokeColor(const QColor &color) {
 
 float LineSeries::strokeWidth() const { return m_strokeWidth; }
 
-void LineSeries::setStrokeWidth(float width) {
-  if (m_strokeWidth == width) {
-    return;
-  }
-
-  m_strokeWidth = width;
-  emit strokeWidthChanged();
-}
-
-float LineSeries::strokeMiterLimit() const { return m_strokeMiterLimit; }
-
-void LineSeries::setStrokeMiterLimit(float newLimit) {
-  if (m_strokeMiterLimit == newLimit) {
-    return;
-  }
-
-  m_strokeMiterLimit = newLimit;
-  emit strokeMiterLimitChanged();
-}
+void LineSeries::setStrokeWidth(float width) { m_strokeWidth = width; }
 
 ChartEnums::StrokePattern LineSeries::strokePattern() const {
   return m_strokePattern;

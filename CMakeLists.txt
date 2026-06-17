@@ -137,7 +137,9 @@ set(CHARTPLOTTER_HEADERS
     include/ChartPlotter/data/parser/CsvDataParser.hpp
     include/ChartPlotter/data/parser/DataParserFactory.hpp
 
+    include/ChartPlotter/axis/Axis.hpp
     include/ChartPlotter/axis/ValueAxis.hpp
+    include/ChartPlotter/axis/CategoryAxis.hpp
 
     include/ChartPlotter/utils/LoggerManager.hpp
     include/ChartPlotter/utils/Gl.hpp
@@ -192,6 +194,7 @@ set(CHARTPLOTTER_SOURCES
     src/data/parser/DataParserFactory.cpp
 
     src/axis/ValueAxis.cpp
+    src/axis/CategoryAxis.cpp
 
     src/node/ChartRenderNode.cpp
 
@@ -302,5 +305,7 @@ if(CMAKE_PROJECT_NAME STREQUAL PROJECT_NAME)
     if(BUILD_EXAMPLES)
         add_subdirectory(examples/BasicChart)
         add_subdirectory(examples/RealTimeChart)
+        add_subdirectory(examples/CategoryLineChart)
+        add_subdirectory(examples/DateTimeLineChart)
     endif()
 endif()

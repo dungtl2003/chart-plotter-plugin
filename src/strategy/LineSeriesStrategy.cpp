@@ -70,31 +70,11 @@ bool variantToDateNumber(const QVariant &value, double &out) {
   return variantToDouble(value, out);
 }
 
-class CategoryMapper {
-public:
-  double valueFor(const QVariant &value) {
-    const QString text = value.toString();
-
-    if (!m_indexByName.contains(text)) {
-      const int index = m_categories.size();
-      m_categories.push_back(text);
-      m_indexByName.insert(text, index);
-    }
-
-    return static_cast<double>(m_indexByName.value(text));
-  }
-
-private:
-  QHash<QString, int> m_indexByName;
-  QVector<QString> m_categories;
-};
-
 } // namespace
 
-std::unique_ptr<RenderData>
-LineSeriesStrategy::build(const AbstractSeries &series,
-                          const ResolvedSeriesData &resolved,
-                          const DataSnapshot &snapshot) {
+std::unique_ptr<RenderData> LineSeriesStrategy::build(
+    const AbstractSeries &series, const ResolvedSeriesData &resolved,
+    const DataSnapshot &snapshot, const SeriesBuildContext &context) {
   auto data = std::make_unique<LineRenderData>();
 
   const auto *lineSeries = qobject_cast<const LineSeries *>(&series);
@@ -108,7 +88,6 @@ LineSeriesStrategy::build(const AbstractSeries &series,
   data->marker.visible = lineSeries->markerVisible();
   data->stroke.color = lineSeries->strokeColor();
   data->stroke.width = lineSeries->strokeWidth();
-  data->stroke.miterLimit = lineSeries->strokeMiterLimit();
   data->stroke.pattern = lineSeries->strokePattern();
   data->stroke.dashStyle = DashStyle{
       .length = data->stroke.width * 2.5f,
@@ -148,13 +127,12 @@ LineSeriesStrategy::build(const AbstractSeries &series,
 
   data->points.reserve(snapshot.rowCount);
 
-  CategoryMapper categoryMapper;
-
   // CP_DEBUG(QString("xIndex = %1, yIndex = %2")
   //              .arg(xIndex)
   //              .arg(yIndex)
   //              .toStdString());
 
+  QSet<double> hasX;
   for (int row = 0; row < snapshot.rowCount; ++row) {
     const QVariant xValue = snapshot.valueAt(xIndex, row);
     const QVariant yValue = snapshot.valueAt(yIndex, row);
@@ -180,9 +158,19 @@ LineSeriesStrategy::build(const AbstractSeries &series,
       }
       break;
 
-    case ChartEnums::DataType::String:
-      x = categoryMapper.valueFor(xValue);
+    case ChartEnums::DataType::String: {
+      if (!context.xCategories) {
+        CP_WARN(
+            "LineSeriesStrategy::build: categorical x but no category axis");
+        return data;
+      }
+      const int idx = context.xCategories->indexOf(xValue.toString());
+      if (idx < 0) {
+        continue; // value wasn't in the shared axis (shouldn't happen)
+      }
+      x = static_cast<double>(idx);
       break;
+    }
 
     default:
       CP_WARN("LineSeriesStrategy::build: unsupported x column type");
@@ -193,7 +181,13 @@ LineSeriesStrategy::build(const AbstractSeries &series,
       continue;
     }
 
+    // we don't accept multiple y, one x
+    if (hasX.contains(x)) {
+      continue;
+    }
+
     data->points.push_back(QPointF(x, y));
+    hasX.insert(x);
 
     includeValue(data->xRange, x);
     includeValue(data->yRange, y);

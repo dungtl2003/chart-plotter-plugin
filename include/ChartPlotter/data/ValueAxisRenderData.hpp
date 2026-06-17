@@ -7,7 +7,7 @@
 
 namespace ChartPlotter {
 
-struct ValueAxisTickRenderData {
+struct AxisTickRenderData {
   QPointF pos;
   QString label;
 
@@ -19,8 +19,8 @@ struct ValueAxisTickRenderData {
   }
 };
 
-struct ValueAxisRenderData : public RenderData {
-  QVector<ValueAxisTickRenderData> ticks;
+struct AxisRenderData : public RenderData {
+  QVector<AxisTickRenderData> ticks;
   ChartEnums::AxisPosition pos = ChartEnums::AxisPosition::Left;
   QColor color = QColor("#c1c1c1");
   double width = 5.0f;

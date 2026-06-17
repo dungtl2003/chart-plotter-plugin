@@ -19,7 +19,6 @@ struct DashStyle {
 struct Stroke {
   QColor color = QColor("#ff3333");
   float width = 5.0f;
-  float miterLimit = 4.0f;
   ChartEnums::StrokePattern pattern = ChartEnums::StrokePattern::Solid;
   DashStyle dashStyle;
   DotStyle dotStyle;

@@ -49,7 +49,6 @@ Window {
             // y: "temperature"
             xColumn: 0
             yColumn: 1
-            strokeWidth: 5
             strokePattern: ChartEnums.StrokePattern.Dash
             antialias: 2
         }
@@ -60,7 +59,6 @@ Window {
             xColumn: 0
             yColumn: 2
             strokeColor: "#000000"
-            strokeWidth: 5
             antialias: 2
             // markerVisible: true
         }
@@ -72,7 +70,6 @@ Window {
             yColumn: 3
             strokeColor: "#9a3d48"
             strokePattern: ChartEnums.StrokePattern.Dot
-            strokeWidth: 5
             antialias: 2
         }
         LineSeries {
@@ -84,7 +81,6 @@ Window {
             strokeColor: "#ea72b9"
             markerColor: "#a55555"
             markerVisible: true
-            strokeWidth: 5
             antialias: 2
         }
         // BarSeries {}

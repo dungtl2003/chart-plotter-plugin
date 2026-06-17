@@ -9,6 +9,18 @@
 
 namespace ChartPlotter {
 
+float GeneralConfig::lineWidth() const { return m_lineWidth; }
+void GeneralConfig::setLineWidth(float newLineWidth) {
+  m_lineWidth = newLineWidth;
+}
+
+bool GeneralConfig::operator==(const GeneralConfig &other) const {
+  return m_lineWidth == other.lineWidth();
+}
+bool GeneralConfig::operator!=(const GeneralConfig &other) const {
+  return m_lineWidth != other.lineWidth();
+}
+
 ChartView::ChartView(QQuickItem *parent) : QQuickItem(parent) {
   setFlag(ItemHasContents, true);
 
@@ -238,6 +250,16 @@ bool ChartView::rebuildXYSeriesRenderPackage(
   DataRange globalX;
   DataRange globalY;
 
+  CategoryAxis xCategoryAxis;
+  const bool xIsCategory =
+      resolvedResult.sharedXColumnType == ChartEnums::DataType::String;
+  if (xIsCategory) {
+    buildCategoryAxis(resolvedResult.xySeries, true, xCategoryAxis);
+  }
+
+  SeriesBuildContext buildContext;
+  buildContext.xCategories = xIsCategory ? &xCategoryAxis : nullptr;
+
   for (const ResolvedSeriesData &resolved : resolvedResult.xySeries) {
     if (!resolved.valid) {
       m_logger->warn("ChartView::rebuildXYSeriesRenderPackage: {}",
@@ -280,8 +302,8 @@ bool ChartView::rebuildXYSeriesRenderPackage(
 
     const DataSnapshot &snapshot = snapshotIt.value();
 
-    std::unique_ptr<RenderData> data =
-        m_strategies[seriesIndex]->build(*series, resolved, snapshot);
+    std::unique_ptr<RenderData> data = m_strategies[seriesIndex]->build(
+        *series, resolved, snapshot, buildContext);
 
     if (!data) {
       m_logger->warn(
@@ -335,40 +357,74 @@ bool ChartView::rebuildXYSeriesRenderPackage(
   m_plotContext.xRange = globalX;
   m_plotContext.yRange = globalY;
 
-  // TODO: handle category axis as well
-  ValueAxisRange xAxisRange = ValueAxis::calculateRange(globalX);
-  ValueAxisRange yAxisRange = ValueAxis::calculateRange(globalY);
-  ValueAxisTicks xAxisTicks = ValueAxis::calculateTicks(xAxisRange);
-  ValueAxisTicks yAxisTicks = ValueAxis::calculateTicks(yAxisRange);
-  // Ticks range normally is larger than data range
-  if (xAxisTicks.ticks.size() > 0) {
-    xAxisRange = ValueAxisRange{.min = xAxisTicks.ticks.at(0).value,
-                                .max = xAxisTicks.ticks.last().value};
+  AxisRange xAxisRange;
+  AxisRange yAxisRange;
+  QVector<AxisTick> xTicks;
+  QVector<AxisTick> yTicks;
+
+  // ---- X axis ----
+  if (xIsCategory) {
+    const int n = xCategoryAxis.size();
+    // half-step padding keeps end categories off the frame; use {0, n-1}
+    // instead if you don't want the edge gaps.
+    xAxisRange = AxisRange{.min = 0, .max = double(n - 1)};
+    xTicks.reserve(n);
+    for (int i = 0; i < n; ++i) {
+      xTicks.push_back({static_cast<double>(i), xCategoryAxis.labelAt(i)});
+    }
+  } else {
+    const AxisRange base = ValueAxis::calculateRange(globalX);
+    const AxisTicks ticks = ValueAxis::calculateTicks(
+        base, 6,
+        resolvedResult.sharedXColumnType == ChartEnums::DataType::Date);
+    xAxisRange = ticks.ticks.isEmpty()
+                     ? base
+                     : AxisRange{.min = ticks.ticks.at(0).value,
+                                 .max = ticks.ticks.last().value};
+    xTicks.reserve(ticks.ticks.size());
+    for (qsizetype i = 0; i < ticks.ticks.size(); ++i) {
+      xTicks.push_back(
+          {xAxisRange.min + i * ticks.step, ticks.ticks.at(i).label});
+    }
   }
-  if (yAxisTicks.ticks.size() > 0) {
-    yAxisRange = ValueAxisRange{.min = yAxisTicks.ticks.at(0).value,
-                                .max = yAxisTicks.ticks.last().value};
+
+  // ---- Y axis (value path) ----
+  {
+    const AxisRange base = ValueAxis::calculateRange(globalY);
+    const AxisTicks ticks = ValueAxis::calculateTicks(base);
+    yAxisRange = ticks.ticks.isEmpty()
+                     ? base
+                     : AxisRange{.min = ticks.ticks.at(0).value,
+                                 .max = ticks.ticks.last().value};
+    yTicks.reserve(ticks.ticks.size());
+    for (qsizetype i = 0; i < ticks.ticks.size(); ++i) {
+      yTicks.push_back(
+          {yAxisRange.min + i * ticks.step, ticks.ticks.at(i).label});
+    }
   }
+
   m_plotContext.xAxisRange = xAxisRange;
   m_plotContext.yAxisRange = yAxisRange;
   m_plotContext.axisPositions =
       ChartEnums::AxisPosition::Left | ChartEnums::AxisPosition::Bottom;
-  auto xData = std::make_unique<ValueAxisRenderData>();
+
+  auto xData = std::make_unique<AxisRenderData>();
   xData->pos = ChartEnums::AxisPosition::Bottom;
-  xData->ticks.reserve(xAxisTicks.ticks.size() - 2);
-  for (qsizetype i = 0; i < xAxisTicks.ticks.size(); ++i) {
-    xData->ticks.push_back(ValueAxisTickRenderData{
-        .pos = QPointF(xAxisRange.min + i * xAxisTicks.step, yAxisRange.min),
-        .label = xAxisTicks.ticks.at(i).label,
+  xData->ticks.reserve(xTicks.size());
+  for (const AxisTick &t : xTicks) {
+    xData->ticks.push_back(AxisTickRenderData{
+        .pos = QPointF(t.value, yAxisRange.min),
+        .label = t.label,
     });
   }
-  auto yData = std::make_unique<ValueAxisRenderData>();
+
+  auto yData = std::make_unique<AxisRenderData>();
   yData->pos = ChartEnums::AxisPosition::Left;
-  yData->ticks.reserve(yAxisTicks.ticks.size() - 2);
-  for (qsizetype i = 0; i < yAxisTicks.ticks.size(); ++i) {
-    yData->ticks.push_back(ValueAxisTickRenderData{
-        .pos = QPointF(xAxisRange.min, yAxisRange.min + i * yAxisTicks.step),
-        .label = yAxisTicks.ticks.at(i).label,
+  yData->ticks.reserve(yTicks.size());
+  for (const AxisTick &t : yTicks) {
+    yData->ticks.push_back(AxisTickRenderData{
+        .pos = QPointF(xAxisRange.min, t.value),
+        .label = t.label,
     });
   }
   // CP_DEBUG(yData->toString().toStdString());
@@ -387,6 +443,31 @@ bool ChartView::rebuildXYSeriesRenderPackage(
 bool ChartView::rebuildPieSeriesRenderPackage(
     const SeriesResolveResult &resolvedSeries) {
   return false;
+}
+
+void ChartView::buildCategoryAxis(const QVector<ResolvedSeriesData> &xySeries,
+                                  bool useX, CategoryAxis &axis) const {
+  for (const ResolvedSeriesData &resolved : xySeries) {
+    if (!resolved.valid) {
+      continue;
+    }
+    auto it = m_snapshots.constFind(resolved.sourceId);
+    if (it == m_snapshots.constEnd()) {
+      continue;
+    }
+    const DataSnapshot &snapshot = it.value();
+    const int col = useX ? resolved.xColumnIndex : resolved.yColumnIndex;
+    if (col < 0 || col >= snapshot.columnCount) {
+      continue;
+    }
+    for (int row = 0; row < snapshot.rowCount; ++row) {
+      const QVariant v = snapshot.valueAt(col, row);
+      if (!v.isValid() || v.isNull()) {
+        continue;
+      }
+      axis.intern(v.toString());
+    }
+  }
 }
 
 std::vector<std::unique_ptr<IOpenGLRenderer>>
@@ -469,7 +550,6 @@ void ChartView::clearContent(QQmlListProperty<QObject> *property) {
 }
 
 QString ChartView::name() const { return m_name; }
-
 void ChartView::setName(QString newName) {
   if (m_name == newName) {
     return;
@@ -484,6 +564,16 @@ void ChartView::setName(QString newName) {
 
   m_logger = LoggerManager::createInstanceLogger(
       appendUniqueId("ChartView_" + m_name.toStdString() + "_"));
+}
+
+GeneralConfig ChartView::generalConfig() const { return m_generalConfig; }
+void ChartView::setGeneralConfig(const GeneralConfig &newConfig) {
+  if (m_generalConfig == newConfig) {
+    return;
+  }
+
+  m_generalConfig = newConfig;
+  emit generalConfigChanged();
 }
 
 void ChartView::resetStrategies() {
