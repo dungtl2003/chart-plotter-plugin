@@ -1,17 +1,28 @@
 #include "ChartPlotter/ChartLayoutPlanner.hpp"
+#include "ChartPlotter/series/BarSeries.hpp"
+#include "ChartPlotter/series/LineSeries.hpp"
 #include "ChartPlotter/series/PieSeries.hpp"
 #include "ChartPlotter/series/XYSeries.hpp"
 
 namespace ChartPlotter {
 
-ChartLayoutPlan
-ChartLayoutPlanner::buildPlan(const QVector<QPointer<AbstractSeries>> &series) {
+ChartLayoutPlanner::ChartLayoutPlanner() { applyDefaultPolicies(); }
+
+ChartLayoutPlan ChartLayoutPlanner::buildPlan(
+    const QVector<QPointer<AbstractSeries>> &series) const {
   ChartLayoutPlan plan;
 
-  if (series.isEmpty()) {
-    plan.valid = false;
-    plan.errorMessage = "ChartView has no series";
-    return plan;
+  for (const auto &policy : m_policies) {
+    if (policy.get() == nullptr) {
+      continue;
+    }
+
+    auto [isValid, errorMessage] = policy->apply(series);
+    if (!isValid) {
+      plan.valid = false;
+      plan.errorMessage = std::move(errorMessage);
+      return plan;
+    }
   }
 
   for (int i = 0; i < series.size(); ++i) {
@@ -23,18 +34,19 @@ ChartLayoutPlanner::buildPlan(const QVector<QPointer<AbstractSeries>> &series) {
       return plan;
     }
 
-    const SeriesLayoutType layoutType = layoutTypeOf(current.data());
+    const CoordinateSystem coordinateSystem =
+        coordinateSystemOf(current.data());
 
-    switch (layoutType) {
-    case SeriesLayoutType::XY:
+    switch (coordinateSystem) {
+    case CoordinateSystem::Cartesian:
       plan.xySeriesIndexes.push_back(i);
       break;
 
-    case SeriesLayoutType::Pie:
+    case CoordinateSystem::Pie:
       plan.pieSeriesIndexes.push_back(i);
       break;
 
-    case SeriesLayoutType::Unknown:
+    case CoordinateSystem::Unknown:
     default:
       plan.valid = false;
       plan.errorMessage =
@@ -46,29 +58,14 @@ ChartLayoutPlanner::buildPlan(const QVector<QPointer<AbstractSeries>> &series) {
   const bool hasXY = !plan.xySeriesIndexes.isEmpty();
   const bool hasPie = !plan.pieSeriesIndexes.isEmpty();
 
-  if (hasXY && hasPie) {
-    plan.valid = false;
-    plan.errorMessage =
-        "Cannot mix XY series and Pie series in the same ChartView yet";
-    return plan;
-  }
-
-  if (hasPie && plan.pieSeriesIndexes.size() > 1) {
-    plan.valid = false;
-    plan.errorMessage =
-        "Multiple Pie series in one ChartView are not supported yet";
-    return plan;
-  }
-
   if (hasXY) {
     plan.valid = true;
-    plan.layoutType = SeriesLayoutType::XY;
+    plan.coordinateSystem = CoordinateSystem::Cartesian;
     return plan;
   }
-
   if (hasPie) {
     plan.valid = true;
-    plan.layoutType = SeriesLayoutType::Pie;
+    plan.coordinateSystem = CoordinateSystem::Pie;
     return plan;
   }
 
@@ -77,21 +74,135 @@ ChartLayoutPlanner::buildPlan(const QVector<QPointer<AbstractSeries>> &series) {
   return plan;
 }
 
-SeriesLayoutType
-ChartLayoutPlanner::layoutTypeOf(const AbstractSeries *series) {
+CoordinateSystem
+ChartLayoutPlanner::coordinateSystemOf(const AbstractSeries *series) {
   if (!series) {
-    return SeriesLayoutType::Unknown;
+    return CoordinateSystem::Unknown;
   }
 
   if (qobject_cast<const XYSeries *>(series)) {
-    return SeriesLayoutType::XY;
+    return CoordinateSystem::Cartesian;
   }
 
   if (qobject_cast<const PieSeries *>(series)) {
-    return SeriesLayoutType::Pie;
+    return CoordinateSystem::Pie;
   }
 
-  return SeriesLayoutType::Unknown;
+  return CoordinateSystem::Unknown;
+}
+
+void ChartLayoutPlanner::applyDefaultPolicies() {
+  m_policies.clear();
+  m_policies.reserve(5);
+  m_policies.push_back(std::make_unique<SeriesNotEmptyPolicy>());
+  m_policies.push_back(std::make_unique<XYAndPieMixNotAllowedPolicy>());
+  m_policies.push_back(std::make_unique<LineAndBarMixNotAllowedPolicy>());
+  m_policies.push_back(std::make_unique<MultipleBarSeriesNotAllowedPolicy>());
+  m_policies.push_back(std::make_unique<MultiplePieSeriesNotAllowedPolicy>());
+}
+
+std::pair<bool, QString> XYAndPieMixNotAllowedPolicy::apply(
+    const QVector<QPointer<AbstractSeries>> &series) const {
+  bool hasXY = false;
+  bool hasPie = false;
+
+  for (const auto &series : series) {
+    if (series.isNull()) {
+      continue;
+    }
+
+    if (qobject_cast<const XYSeries *>(series)) {
+      hasXY = true;
+    }
+    if (qobject_cast<const PieSeries *>(series)) {
+      hasPie = true;
+    }
+
+    if (hasXY && hasPie) {
+      return {
+          false,
+          "Mix XY series and Pie series in the same ChartView is not allowed"};
+    }
+  }
+
+  return {true, ""};
+}
+
+std::pair<bool, QString> LineAndBarMixNotAllowedPolicy::apply(
+    const QVector<QPointer<AbstractSeries>> &series) const {
+  bool hasLine = false;
+  bool hasBar = false;
+
+  for (const auto &series : series) {
+    if (series.isNull()) {
+      continue;
+    }
+
+    if (qobject_cast<const LineSeries *>(series)) {
+      hasLine = true;
+    }
+    if (qobject_cast<const BarSeries *>(series)) {
+      hasBar = true;
+    }
+
+    if (hasLine && hasBar) {
+      return {false, "Mix Line series and Bar series in the same ChartView is "
+                     "not allowed"};
+    }
+  }
+
+  return {true, ""};
+}
+
+std::pair<bool, QString> MultipleBarSeriesNotAllowedPolicy::apply(
+    const QVector<QPointer<AbstractSeries>> &series) const {
+  bool hasBar = false;
+
+  for (const auto &series : series) {
+    if (series.isNull()) {
+      continue;
+    }
+
+    if (qobject_cast<const BarSeries *>(series)) {
+      if (hasBar) {
+        return {false, "Multiple Bar series in the same ChartView is "
+                       "not allowed"};
+      }
+      hasBar = true;
+    }
+  }
+
+  return {true, ""};
+}
+
+std::pair<bool, QString> MultiplePieSeriesNotAllowedPolicy::apply(
+    const QVector<QPointer<AbstractSeries>> &series) const {
+  bool hasPie = false;
+
+  for (const auto &series : series) {
+    if (series.isNull()) {
+      continue;
+    }
+
+    if (qobject_cast<const PieSeries *>(series)) {
+      if (hasPie) {
+        return {false, "Multiple Pie series in the same ChartView is "
+                       "not allowed"};
+      }
+      hasPie = true;
+    }
+  }
+
+  return {true, ""};
+}
+
+std::pair<bool, QString> SeriesNotEmptyPolicy::apply(
+    const QVector<QPointer<AbstractSeries>> &series) const {
+  if (series.isEmpty()) {
+    return {false, "ChartView must have series"};
+  }
+
+  return {true, ""};
 }
 
 } // namespace ChartPlotter

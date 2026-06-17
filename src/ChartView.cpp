@@ -27,7 +27,8 @@ ChartView::~ChartView() {
 void ChartView::componentComplete() {
   QQuickItem::componentComplete();
 
-  m_plan = ChartLayoutPlanner::buildPlan(m_series);
+  ChartLayoutPlanner planner;
+  m_plan = planner.buildPlan(m_series);
   if (!m_plan.valid) {
     m_logger->warn("ChartView::componentComplete: {}",
                    m_plan.errorMessage.toStdString());
@@ -218,11 +219,11 @@ bool ChartView::rebuildRenderPackage() {
     return false;
   }
 
-  if (m_plan.layoutType == SeriesLayoutType::XY) {
+  if (m_plan.coordinateSystem == CoordinateSystem::Cartesian) {
     return rebuildXYSeriesRenderPackage(m_resolvedSeries);
   }
 
-  if (m_plan.layoutType == SeriesLayoutType::Pie) {
+  if (m_plan.coordinateSystem == CoordinateSystem::Pie) {
     return rebuildPieSeriesRenderPackage(m_resolvedSeries);
   }
 
