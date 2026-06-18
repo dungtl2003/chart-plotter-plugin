@@ -24,7 +24,7 @@ int main(int argc, char *argv[]) {
   engine.addImportPath(PLUGIN_IMPORT_PATH);
   qDebug() << "Loaded Plugin from:" << PLUGIN_IMPORT_PATH;
 
-  const QUrl url(u"qrc:/qt/qml/Main/qml/Main.qml"_s);
+  const QUrl url(u"qrc:/qt/qml/DateTimeLineChart/qml/Main.qml"_s);
   QObject::connect(
       &engine, &QQmlApplicationEngine::objectCreationFailed, &app,
       []() { QCoreApplication::exit(-1); }, Qt::QueuedConnection);

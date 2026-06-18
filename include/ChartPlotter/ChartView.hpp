@@ -5,6 +5,7 @@
 #include "ChartPlotter/data/DataManagerPool.hpp"
 #include "ChartPlotter/data/DataSource.hpp"
 #include "ChartPlotter/data/RenderData.hpp"
+#include "ChartPlotter/legend/LegendModel.hpp"
 #include "ChartPlotter/renderer/IOpenGLRenderer.hpp"
 #include "ChartPlotter/series/AbstractSeries.hpp"
 #include "ChartPlotter/series/SeriesDataResolver.hpp"
@@ -44,6 +45,16 @@ class ChartView : public QQuickItem {
   Q_PROPERTY(ChartPlotter::GeneralConfig generalConfig READ generalConfig WRITE
                  setGeneralConfig NOTIFY generalConfigChanged)
 
+  Q_PROPERTY(QString title READ title WRITE setTitle NOTIFY titleChanged)
+  Q_PROPERTY(
+      ChartPlotter::ChartEnums::LegendPosition legendPosition READ
+          legendPosition WRITE setLegendPosition NOTIFY legendPositionChanged)
+  Q_PROPERTY(ChartPlotter::LegendModel *legendModel READ legendModel CONSTANT)
+  Q_PROPERTY(QQuickItem *titleItem READ titleItem WRITE setTitleItem NOTIFY
+                 titleItemChanged)
+  Q_PROPERTY(QQuickItem *legendItem READ legendItem WRITE setLegendItem NOTIFY
+                 legendItemChanged)
+
 public:
   using RendererCreator = std::function<std::unique_ptr<IOpenGLRenderer>()>;
 
@@ -64,13 +75,33 @@ public:
   GeneralConfig generalConfig() const;
   void setGeneralConfig(const GeneralConfig &newConfig);
 
+  QString title() const;
+  void setTitle(const QString &title);
+
+  ChartEnums::LegendPosition legendPosition() const;
+  void setLegendPosition(ChartEnums::LegendPosition position);
+
+  LegendModel *legendModel() const;
+
+  QQuickItem *titleItem() const;
+  void setTitleItem(QQuickItem *item);
+  QQuickItem *legendItem() const;
+  void setLegendItem(QQuickItem *item);
+
 public slots:
   void onDataError(const QString &message);
   void onSnapshotReady(int sourceId, const DataSnapshot &snapshot);
 
+protected:
+  void geometryChange(const QRectF &newGeom, const QRectF &oldGeom) override;
+
 signals:
   void nameChanged();
   void generalConfigChanged();
+  void titleChanged();
+  void legendPositionChanged();
+  void titleItemChanged();
+  void legendItemChanged();
 
 private:
   QPointer<DataManagerPool> m_dataManagerPool = nullptr;
@@ -87,6 +118,13 @@ private:
   SeriesResolveResult m_resolvedSeries;
   std::optional<ChartRenderPackage> m_pendingRenderPackage;
   PlotContext m_plotContext;
+  QString m_title;
+  ChartEnums::LegendPosition m_legendPosition =
+      ChartEnums::LegendPosition::Right;
+  LegendModel *m_legendModel = nullptr;
+  QPointer<QQuickItem> m_titleItem;
+  QPointer<QQuickItem> m_legendItem;
+  QRectF m_plotOuterRect;
 
   void dropLogger();
   std::string appendUniqueId(std::string s) const;
@@ -102,6 +140,10 @@ private:
   static QObject *contentAt(QQmlListProperty<QObject> *property,
                             qsizetype index);
   static void clearContent(QQmlListProperty<QObject> *property);
+
+  void replan();
+  void relayout();
+  void rebuildLegendModel();
 };
 
 } // namespace ChartPlotter

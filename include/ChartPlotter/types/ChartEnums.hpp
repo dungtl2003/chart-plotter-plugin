@@ -55,6 +55,9 @@ public:
   };
 
   enum class AxisType { Value, Category };
+
+  enum class LegendPosition { None, Left, Right, Top, Bottom };
+  Q_ENUM(LegendPosition)
 };
 
 Q_DECLARE_OPERATORS_FOR_FLAGS(ChartEnums::AxisPositions)

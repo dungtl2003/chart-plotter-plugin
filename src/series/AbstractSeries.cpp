@@ -14,4 +14,15 @@ void AbstractSeries::setSource(QPointer<DataSource> newSource) {
   emit sourceChanged();
 }
 
+QString AbstractSeries::name() const { return m_name; }
+void AbstractSeries::setName(const QString &name) {
+  if (m_name == name) {
+    return;
+  }
+  m_name = name;
+  emit nameChanged();
+}
+
+QColor AbstractSeries::legendColor() const { return Qt::black; }
+
 } // namespace ChartPlotter

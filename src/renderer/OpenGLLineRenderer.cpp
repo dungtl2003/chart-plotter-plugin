@@ -224,8 +224,8 @@ void OpenGLLineRenderer::render(const ChartRenderContext &context) {
   uploadStrokeVertices(f);
   uploadMarkerVertices(f);
 
-  f->glEnable(GL_BLEND);
-  f->glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+  // f->glEnable(GL_BLEND);
+  // f->glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
   bindStrokeProgram(mvp);
   drawStrokesAsTriangles(f);
@@ -237,7 +237,7 @@ void OpenGLLineRenderer::render(const ChartRenderContext &context) {
     m_markerProgram->release();
   }
 
-  f->glDisable(GL_BLEND);
+  // f->glDisable(GL_BLEND);
 }
 
 void OpenGLLineRenderer::setData(std::unique_ptr<RenderData> data) {

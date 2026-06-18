@@ -23,7 +23,8 @@ bool GeneralConfig::operator!=(const GeneralConfig &other) const {
 ChartView::ChartView(QQuickItem *parent) : QQuickItem(parent) {
   setFlag(ItemHasContents, true);
 
-  m_dataManagerPool = new DataManagerPool(parent);
+  m_dataManagerPool = new DataManagerPool(this);
+  m_legendModel = new LegendModel(this);
   m_name = QString::fromStdString(appendUniqueId("ChartView_EarlyInit_"));
   m_logger = LoggerManager::createInstanceLogger(m_name.toStdString());
   connect(m_dataManagerPool, &DataManagerPool::errorOccurred, this,
@@ -34,6 +35,13 @@ ChartView::ChartView(QQuickItem *parent) : QQuickItem(parent) {
         onSnapshotReady(id, snapshot);
       },
       Qt::QueuedConnection);
+
+  connect(m_legendModel, &LegendModel::visibilityChanged, this,
+          [this](int, bool) {
+            if (m_plan.valid && rebuildRenderPackage()) {
+              update();
+            }
+          });
 }
 
 ChartView::~ChartView() {
@@ -46,18 +54,30 @@ void ChartView::componentComplete() {
   QQuickItem::componentComplete();
 
   ChartLayoutPlanner planner;
-  m_plan = planner.buildPlan(m_series);
+  ChartChromeRequest chrome;
+  chrome.hasTitle = !m_title.isEmpty();
+  chrome.legendPosition = m_legendPosition;
+  m_plan = planner.buildPlan(m_series, chrome);
   if (!m_plan.valid) {
     m_logger->warn("ChartView::componentComplete: {}",
                    m_plan.errorMessage.toStdString());
     return;
   }
 
+  rebuildLegendModel();
+
   for (auto source : m_sources) {
     if (m_dataManagerPool) {
       m_dataManagerPool->createDataManager(source);
     }
   }
+
+  relayout();
+}
+
+void ChartView::geometryChange(const QRectF &newGeom, const QRectF &oldGeom) {
+  QQuickItem::geometryChange(newGeom, oldGeom);
+  relayout();
 }
 
 void ChartView::onDataError(const QString &message) {
@@ -93,11 +113,11 @@ QSGNode *ChartView::updatePaintNode(QSGNode *oldNode, UpdatePaintNodeData *) {
     m_pendingRenderPackage.reset();
   }
 
-  m_plotContext.itemRect = boundingRect();
-  auto plotMargins = m_plan.plotMargins;
-  m_plotContext.plotArea =
-      m_plotContext.itemRect.adjusted(plotMargins.left, plotMargins.top,
-                                      -plotMargins.right, -plotMargins.bottom);
+  const QRectF outer =
+      m_plotOuterRect.isValid() ? m_plotOuterRect : boundingRect();
+  const auto m = m_plan.plotMargins;
+  m_plotContext.itemRect = outer;
+  m_plotContext.plotArea = outer.adjusted(m.left, m.top, -m.right, -m.bottom);
   node->setPlotContext(m_plotContext);
 
   return node;
@@ -205,6 +225,10 @@ bool ChartView::rebuildXYSeriesRenderPackage(
           "ChartView::rebuildXYSeriesRenderPackage: missing strategy for "
           "series index {}",
           seriesIndex);
+      continue;
+    }
+
+    if (m_legendModel && !m_legendModel->isVisible(seriesIndex)) {
       continue;
     }
 
@@ -443,6 +467,161 @@ std::string ChartView::appendUniqueId(std::string s) const {
   ss << s << this;
 
   return ss.str();
+}
+
+void ChartView::relayout() {
+  QRectF rect = boundingRect();
+
+  if (m_titleItem) {
+    if (m_plan.hasTitle) {
+      m_titleItem->setVisible(true);
+      const qreal h = m_titleItem->implicitHeight() > 0
+                          ? m_titleItem->implicitHeight()
+                          : m_titleItem->height();
+      m_titleItem->setPosition(QPointF(rect.left(), rect.top()));
+      m_titleItem->setSize(QSizeF(rect.width(), h));
+      rect.setTop(rect.top() + h);
+    } else {
+      m_titleItem->setVisible(false);
+    }
+  }
+
+  if (m_legendItem) {
+    const auto pos = m_plan.legendPosition;
+    m_legendItem->setProperty("horizontal",
+                              pos == ChartEnums::LegendPosition::Top ||
+                                  pos == ChartEnums::LegendPosition::Bottom);
+    if (pos != ChartEnums::LegendPosition::None) {
+      m_legendItem->setVisible(true);
+      switch (pos) {
+      case ChartEnums::LegendPosition::Right: {
+        const qreal w = m_legendItem->implicitWidth();
+        m_legendItem->setPosition(QPointF(rect.right() - w, rect.top()));
+        m_legendItem->setSize(QSizeF(w, rect.height()));
+        rect.setRight(rect.right() - w);
+        break;
+      }
+      case ChartEnums::LegendPosition::Left: {
+        const qreal w = m_legendItem->implicitWidth();
+        m_legendItem->setPosition(QPointF(rect.left(), rect.top()));
+        m_legendItem->setSize(QSizeF(w, rect.height()));
+        rect.setLeft(rect.left() + w);
+        break;
+      }
+      case ChartEnums::LegendPosition::Top: {
+        const qreal h = m_legendItem->implicitHeight();
+        m_legendItem->setPosition(QPointF(rect.left(), rect.top()));
+        m_legendItem->setSize(QSizeF(rect.width(), h));
+        rect.setTop(rect.top() + h);
+        break;
+      }
+      case ChartEnums::LegendPosition::Bottom: {
+        const qreal h = m_legendItem->implicitHeight();
+        m_legendItem->setPosition(QPointF(rect.left(), rect.bottom() - h));
+        m_legendItem->setSize(QSizeF(rect.width(), h));
+        rect.setBottom(rect.bottom() - h);
+        break;
+      }
+      default:
+        break;
+      }
+    } else {
+      m_legendItem->setVisible(false);
+    }
+  }
+
+  m_plotOuterRect = rect;
+  update();
+}
+
+void ChartView::replan() {
+  if (!isComponentComplete()) {
+    return;
+  }
+  ChartLayoutPlanner planner;
+  ChartChromeRequest chrome;
+  chrome.hasTitle = !m_title.isEmpty();
+  chrome.legendPosition = m_legendPosition;
+  m_plan = planner.buildPlan(m_series, chrome);
+  relayout();
+}
+
+void ChartView::rebuildLegendModel() {
+  if (!m_legendModel) {
+    return;
+  }
+  QVector<LegendEntry> entries;
+  entries.reserve(m_series.size());
+  for (int i = 0; i < m_series.size(); ++i) {
+    AbstractSeries *series = m_series.at(i);
+    LegendEntry entry;
+    if (series) {
+      entry.name = series->name();
+      entry.color = series->legendColor();
+    }
+    if (entry.name.isEmpty()) {
+      entry.name = QStringLiteral("Series %1").arg(i + 1);
+    }
+    entries.push_back(entry);
+  }
+  m_legendModel->setEntries(entries);
+}
+
+QString ChartView::title() const { return m_title; }
+void ChartView::setTitle(const QString &title) {
+  if (m_title == title) {
+    return;
+  }
+  m_title = title;
+  emit titleChanged();
+  replan(); // hasTitle depends on whether a title is set
+}
+
+ChartEnums::LegendPosition ChartView::legendPosition() const {
+  return m_legendPosition;
+}
+void ChartView::setLegendPosition(ChartEnums::LegendPosition position) {
+  if (m_legendPosition == position) {
+    return;
+  }
+  m_legendPosition = position;
+  emit legendPositionChanged();
+  replan();
+}
+
+LegendModel *ChartView::legendModel() const { return m_legendModel; }
+
+QQuickItem *ChartView::titleItem() const { return m_titleItem; }
+void ChartView::setTitleItem(QQuickItem *item) {
+  if (m_titleItem == item) {
+    return;
+  }
+  m_titleItem = item;
+  if (item) {
+    item->setParentItem(this);
+  }
+  emit titleItemChanged();
+  relayout();
+}
+
+QQuickItem *ChartView::legendItem() const { return m_legendItem; }
+void ChartView::setLegendItem(QQuickItem *item) {
+  if (m_legendItem == item) {
+    return;
+  }
+  if (m_legendItem) {
+    m_legendItem->disconnect(this);
+  }
+  m_legendItem = item;
+  if (item) {
+    item->setParentItem(this);
+    connect(item, &QQuickItem::implicitWidthChanged, this,
+            &ChartView::relayout);
+    connect(item, &QQuickItem::implicitHeightChanged, this,
+            &ChartView::relayout);
+  }
+  emit legendItemChanged();
+  relayout();
 }
 
 } // namespace ChartPlotter

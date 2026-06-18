@@ -86,9 +86,16 @@ qt_policy(SET QTP0004 NEW)
 
 ################################################################################
 
+set(CHARTPLOTTER_QMLS
+    qml/ChartPlotter/Legend.qml
+    qml/ChartPlotter/ChartTitle.qml
+)
+
 set(CHARTPLOTTER_HEADERS
     include/ChartPlotter/ChartView.hpp
     include/ChartPlotter/ChartLayoutPlanner.hpp
+
+    include/ChartPlotter/legend/LegendModel.hpp
 
     include/ChartPlotter/series/AbstractSeries.hpp
     include/ChartPlotter/series/XYSeries.hpp
@@ -152,6 +159,8 @@ set(CHARTPLOTTER_HEADERS
 set(CHARTPLOTTER_SOURCES
     src/ChartView.cpp
     src/ChartLayoutPlanner.cpp
+
+    src/legend/LegendModel.cpp
 
     src/series/AbstractSeries.cpp
     src/series/XYSeries.cpp
@@ -222,6 +231,9 @@ qt_add_qml_module(${PROJECT_NAME}
     VERSION ${PROJECT_VERSION}
     OUTPUT_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/${PROJECT_NAME}
 
+    QML_FILES
+        ${CHARTPLOTTER_QMLS}
+
     SOURCES
         ${CHARTPLOTTER_HEADERS}
         ${CHARTPLOTTER_SOURCES}
@@ -237,6 +249,7 @@ target_include_directories(${PROJECT_NAME}
     PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/include/ChartPlotter
     ${CMAKE_CURRENT_SOURCE_DIR}/include/ChartPlotter/chart
+    ${CMAKE_CURRENT_SOURCE_DIR}/include/ChartPlotter/legend
     ${CMAKE_CURRENT_SOURCE_DIR}/include/ChartPlotter/series
     ${CMAKE_CURRENT_SOURCE_DIR}/include/ChartPlotter/data
     ${CMAKE_CURRENT_SOURCE_DIR}/include/ChartPlotter/data/reader

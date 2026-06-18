@@ -52,8 +52,6 @@ Window {
             y: "temperature"
             xColumn: 0
             yColumn: 1
-            strokeWidth: 2
-            strokeMiterLimit: 1
             antialias: 1
         }
         LineSeries {
@@ -63,7 +61,6 @@ Window {
             xColumn: 0
             yColumn: 1
             strokeColor: "#000000"
-            strokeWidth: 2
             // markerVisible: true
         }
 

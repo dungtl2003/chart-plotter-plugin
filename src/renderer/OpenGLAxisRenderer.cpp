@@ -133,14 +133,14 @@ void OpenGLAxisRenderer::render(const ChartRenderContext &context) {
   buildLabelVertices(context, ticks, f, dpr);
 
   uploadStrokeVertices(f, m_gridVertices);
-  bindStrokeProgram(mvp, axisData->color.lighter(125));
+  bindStrokeProgram(mvp, axisData->axisColor.lighter(125));
   drawStrokesAsTriangles(f, m_gridVertices);
 
   uploadStrokeVertices(f, m_axisAndTickVertices);
-  bindStrokeProgram(mvp, axisData->color);
+  bindStrokeProgram(mvp, axisData->axisColor);
   drawStrokesAsTriangles(f, m_axisAndTickVertices);
 
-  drawLabels(f, mvp, axisData->color);
+  drawLabels(f, mvp, axisData->fontColor);
 
   m_strokeProgram->release();
 }
@@ -426,9 +426,9 @@ void OpenGLAxisRenderer::drawLabels(QOpenGLExtraFunctions *f,
   m_textProgram->setUniformValue("u_color", color);
   m_textProgram->setUniformValue("u_texture", 0);
 
-  const GLboolean blendWasOn = f->glIsEnabled(GL_BLEND);
-  f->glEnable(GL_BLEND);
-  f->glBlendFunc(GL_ONE, GL_ONE_MINUS_SRC_ALPHA);
+  // const GLboolean blendWasOn = f->glIsEnabled(GL_BLEND);
+  // f->glEnable(GL_BLEND);
+  // f->glBlendFunc(GL_ONE, GL_ONE_MINUS_SRC_ALPHA);
 
   f->glActiveTexture(GL_TEXTURE0);
   f->glBindVertexArray(m_textVao);
@@ -439,9 +439,9 @@ void OpenGLAxisRenderer::drawLabels(QOpenGLExtraFunctions *f,
   f->glBindVertexArray(0);
   f->glBindTexture(GL_TEXTURE_2D, 0);
 
-  if (!blendWasOn) {
-    f->glDisable(GL_BLEND);
-  }
+  // if (!blendWasOn) {
+  //   f->glDisable(GL_BLEND);
+  // }
   m_textProgram->release();
 }
 

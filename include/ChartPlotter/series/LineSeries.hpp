@@ -28,6 +28,7 @@ public:
   explicit LineSeries(QObject *parent = nullptr);
 
   ChartEnums::SeriesType type() override;
+  QColor legendColor() const override;
 
   QColor strokeColor() const;
   void setStrokeColor(const QColor &color);
@@ -58,7 +59,7 @@ signals:
 
 private:
   QColor m_strokeColor = QColor("#ff3333");
-  float m_strokeWidth = 5.0f;
+  float m_strokeWidth = 3.0f;
   ChartEnums::StrokePattern m_strokePattern = ChartEnums::StrokePattern::Solid;
 
   bool m_markerVisible = false;

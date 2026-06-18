@@ -1,6 +1,7 @@
 #pragma once
 
 #include "ChartPlotter/series/AbstractSeries.hpp"
+#include "ChartPlotter/types/ChartEnums.hpp"
 
 #include <QString>
 
@@ -57,10 +58,15 @@ enum class CoordinateSystem {
 };
 
 struct ChartMargins {
-  qreal left = 100;
-  qreal top = 100;
-  qreal right = 100;
-  qreal bottom = 100;
+  qreal left = 90;
+  qreal top = 90;
+  qreal right = 90;
+  qreal bottom = 90;
+};
+
+struct ChartChromeRequest {
+  bool hasTitle = false;
+  ChartEnums::LegendPosition legendPosition = ChartEnums::LegendPosition::None;
 };
 
 struct ChartLayoutPlan {
@@ -73,6 +79,9 @@ struct ChartLayoutPlan {
   QVector<int> pieSeriesIndexes;
 
   ChartMargins plotMargins;
+
+  bool hasTitle = false; // reserve a band at the top
+  ChartEnums::LegendPosition legendPosition = ChartEnums::LegendPosition::None;
 };
 
 class ChartLayoutPlanner {
@@ -80,8 +89,8 @@ class ChartLayoutPlanner {
 public:
   ChartLayoutPlanner();
 
-  ChartLayoutPlan
-  buildPlan(const QVector<QPointer<AbstractSeries>> &series) const;
+  ChartLayoutPlan buildPlan(const QVector<QPointer<AbstractSeries>> &series,
+                            const ChartChromeRequest &chrome = {}) const;
 
 private:
   std::vector<std::unique_ptr<ChartLayoutPolicy>> m_policies;

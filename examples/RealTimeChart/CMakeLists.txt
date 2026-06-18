@@ -27,7 +27,7 @@ endif()
 qt_add_executable(RealTimeChartExample src/main.cpp)
 
 qt_add_qml_module(RealTimeChartExample
-    URI Main
+    URI RealTimeChart
     VERSION 1.0
     QML_FILES qml/Main.qml
 )

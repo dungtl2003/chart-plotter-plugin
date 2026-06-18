@@ -90,11 +90,11 @@ std::unique_ptr<RenderData> LineSeriesStrategy::build(
   data->stroke.width = lineSeries->strokeWidth();
   data->stroke.pattern = lineSeries->strokePattern();
   data->stroke.dashStyle = DashStyle{
-      .length = data->stroke.width * 2.5f,
-      .gap = data->stroke.width * 1.5f,
+      .length = std::max(15.0f, data->stroke.width * 3.0f),
+      .gap = std::max(10.0f, data->stroke.width * 2.0f),
   };
   data->stroke.dotStyle = DotStyle{
-      .gap = data->stroke.width,
+      .gap = std::max(10.0f, data->stroke.width),
   };
   data->antialias = lineSeries->antialias();
 

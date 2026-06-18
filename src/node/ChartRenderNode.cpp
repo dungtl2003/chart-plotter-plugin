@@ -42,6 +42,9 @@ void ChartRenderNode::render(const RenderState *state) {
     mvp = *state->projectionMatrix() * *matrix();
   }
 
+  f->glEnable(GL_BLEND);
+  f->glBlendFunc(GL_ONE, GL_ONE_MINUS_SRC_ALPHA);
+
   renderRenderers(ChartRenderContext{
       .f = f,
       .mvp = std::move(mvp),
@@ -53,6 +56,8 @@ void ChartRenderNode::render(const RenderState *state) {
       .yAxisRange = m_plotContext.yAxisRange,
       .axisPositions = m_plotContext.axisPositions,
   });
+
+  f->glDisable(GL_BLEND);
 }
 
 void ChartRenderNode::releaseResources() {

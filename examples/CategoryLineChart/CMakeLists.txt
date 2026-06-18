@@ -27,7 +27,7 @@ endif()
 qt_add_executable(CategoryLineChartExample src/main.cpp)
 
 qt_add_qml_module(CategoryLineChartExample
-    URI Main
+    URI CategoryLineChart
     VERSION 1.0
     QML_FILES qml/Main.qml
 )

@@ -24,9 +24,10 @@ struct AxisRenderData : public RenderData {
   ChartEnums::AxisPosition pos = ChartEnums::AxisPosition::Left;
   // AxisRenderData
   ChartEnums::TickMode tickMode = ChartEnums::TickMode::OnTick;
-  QColor color = QColor("#c1c1c1");
-  double width = 5.0f;
-  int fontSize = 20;
+  QColor axisColor = QColor("#c1c1c1");
+  QColor fontColor = Qt::black;
+  double width = 3.0f;
+  int fontSize = 18;
 
   QString toString() const override {
     QString result;

@@ -27,7 +27,7 @@ endif()
 qt_add_executable(DateTimeLineChartExample src/main.cpp)
 
 qt_add_qml_module(DateTimeLineChartExample
-    URI Main
+    URI DateTimeLineChart
     VERSION 1.0
     QML_FILES qml/Main.qml
 )

@@ -8,6 +8,8 @@ ChartEnums::SeriesType LineSeries::type() {
   return ChartEnums::SeriesType::Line;
 }
 
+QColor LineSeries::legendColor() const { return strokeColor(); }
+
 QColor LineSeries::strokeColor() const { return m_strokeColor; }
 
 void LineSeries::setStrokeColor(const QColor &color) {

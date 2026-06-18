@@ -8,8 +8,9 @@ namespace ChartPlotter {
 
 ChartLayoutPlanner::ChartLayoutPlanner() { applyDefaultPolicies(); }
 
-ChartLayoutPlan ChartLayoutPlanner::buildPlan(
-    const QVector<QPointer<AbstractSeries>> &series) const {
+ChartLayoutPlan
+ChartLayoutPlanner::buildPlan(const QVector<QPointer<AbstractSeries>> &series,
+                              const ChartChromeRequest &chrome) const {
   ChartLayoutPlan plan;
 
   for (const auto &policy : m_policies) {
@@ -57,6 +58,26 @@ ChartLayoutPlan ChartLayoutPlanner::buildPlan(
 
   const bool hasXY = !plan.xySeriesIndexes.isEmpty();
   const bool hasPie = !plan.pieSeriesIndexes.isEmpty();
+  const bool hasSeries =
+      !plan.xySeriesIndexes.isEmpty() || !plan.pieSeriesIndexes.isEmpty();
+  plan.hasTitle = chrome.hasTitle && hasSeries;
+  plan.legendPosition =
+      hasSeries ? chrome.legendPosition : ChartEnums::LegendPosition::None;
+
+  // TODO: we need to have strategy to find the good margin instead of these
+  // magic numbers
+  if (plan.hasTitle || plan.legendPosition == ChartEnums::LegendPosition::Top) {
+    plan.plotMargins.top = 30;
+  }
+  if (plan.legendPosition == ChartEnums::LegendPosition::Left) {
+    plan.plotMargins.left = 30;
+  }
+  if (plan.legendPosition == ChartEnums::LegendPosition::Bottom) {
+    plan.plotMargins.bottom = 40;
+  }
+  if (plan.legendPosition == ChartEnums::LegendPosition::Right) {
+    plan.plotMargins.right = 30;
+  }
 
   if (hasXY) {
     plan.valid = true;
