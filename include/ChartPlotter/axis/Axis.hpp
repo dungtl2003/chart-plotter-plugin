@@ -20,4 +20,9 @@ struct AxisTicks {
   QVector<AxisTick> ticks;
 };
 
+struct AxisModel {
+  AxisRange range;
+  QVector<AxisTick> ticks;
+};
+
 } // namespace ChartPlotter

@@ -1,5 +1,6 @@
 #pragma once
 
+#include "ChartPlotter/axis/CategoryAxis.hpp"
 #include "ChartPlotter/types/ChartEnums.hpp"
 
 #include <QString>
@@ -47,6 +48,8 @@ struct SeriesResolveResult {
 
   QString sharedXColumnName;
   ChartEnums::DataType sharedXColumnType = ChartEnums::DataType::Unknown;
+  CategoryAxis
+      sharedXCategories; // populated only when sharedXColumnType == String
 };
 
 } // namespace ChartPlotter

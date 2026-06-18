@@ -39,7 +39,7 @@ struct AxisRenderData : public RenderData {
       }
     }
 
-    return QString("ValueAxisRenderData({ticks = [%1]\n})").arg(result);
+    return QString("AxisRenderData({ticks = [%1]\n})").arg(result);
   }
 };
 

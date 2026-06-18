@@ -94,8 +94,6 @@ private:
   bool rebuildRenderPackage();
   bool rebuildXYSeriesRenderPackage(const SeriesResolveResult &resolvedSeries);
   bool rebuildPieSeriesRenderPackage(const SeriesResolveResult &resolvedSeries);
-  void buildCategoryAxis(const QVector<ResolvedSeriesData> &xySeries, bool useX,
-                         CategoryAxis &axis) const;
   DataRange unionRange(const DataRange &a, const DataRange &b) const;
   std::vector<std::unique_ptr<IOpenGLRenderer>> createRenderersFromPlan() const;
   static void appendContent(QQmlListProperty<QObject> *property,

@@ -1,5 +1,5 @@
 #include "ChartPlotter/node/ChartRenderNode.hpp"
-#include "ChartPlotter/renderer/OpenGLValueAxisRenderer.hpp"
+#include "ChartPlotter/renderer/OpenGLAxisRenderer.hpp"
 #include "ChartPlotter/utils/LoggerManager.hpp"
 #include "ChartRenderContext.hpp"
 
@@ -90,8 +90,8 @@ void ChartRenderNode::setRenderers(
   }
 
   m_renderers = std::move(renderers);
-  m_xAxisRenderer = std::make_unique<OpenGLValueAxisRenderer>();
-  m_yAxisRenderer = std::make_unique<OpenGLValueAxisRenderer>();
+  m_xAxisRenderer = std::make_unique<OpenGLAxisRenderer>();
+  m_yAxisRenderer = std::make_unique<OpenGLAxisRenderer>();
 }
 
 void ChartRenderNode::setRenderPackage(ChartRenderPackage package) {

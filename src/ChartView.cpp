@@ -1,8 +1,7 @@
 #include "ChartPlotter/ChartView.hpp"
 
-#include "ChartPlotter/axis/ValueAxis.hpp"
+#include "ChartPlotter/axis/AxisBuilder.hpp"
 #include "ChartPlotter/data/RenderData.hpp"
-#include "ChartPlotter/data/ValueAxisRenderData.hpp"
 #include "ChartPlotter/node/ChartRenderNode.hpp"
 #include "ChartPlotter/utils/LoggerManager.hpp"
 #include "factory/SeriesComponentFactoryProvider.hpp"
@@ -95,8 +94,10 @@ QSGNode *ChartView::updatePaintNode(QSGNode *oldNode, UpdatePaintNodeData *) {
   }
 
   m_plotContext.itemRect = boundingRect();
+  auto plotMargins = m_plan.plotMargins;
   m_plotContext.plotArea =
-      m_plotContext.itemRect.adjusted(100, 100, -100, -100);
+      m_plotContext.itemRect.adjusted(plotMargins.left, plotMargins.top,
+                                      -plotMargins.right, -plotMargins.bottom);
   node->setPlotContext(m_plotContext);
 
   return node;
@@ -175,15 +176,12 @@ bool ChartView::rebuildXYSeriesRenderPackage(
   DataRange globalX;
   DataRange globalY;
 
-  CategoryAxis xCategoryAxis;
   const bool xIsCategory =
       resolvedResult.sharedXColumnType == ChartEnums::DataType::String;
-  if (xIsCategory) {
-    buildCategoryAxis(resolvedResult.xySeries, true, xCategoryAxis);
-  }
 
   SeriesBuildContext buildContext;
-  buildContext.xCategories = xIsCategory ? &xCategoryAxis : nullptr;
+  buildContext.xCategories =
+      xIsCategory ? &resolvedResult.sharedXCategories : nullptr;
 
   for (const ResolvedSeriesData &resolved : resolvedResult.xySeries) {
     if (!resolved.valid) {
@@ -282,82 +280,28 @@ bool ChartView::rebuildXYSeriesRenderPackage(
   m_plotContext.xRange = globalX;
   m_plotContext.yRange = globalY;
 
-  AxisRange xAxisRange;
-  AxisRange yAxisRange;
-  QVector<AxisTick> xTicks;
-  QVector<AxisTick> yTicks;
+  const AxisModel xModel =
+      xIsCategory
+          ? AxisBuilder::buildCategoryAxis(resolvedResult.sharedXCategories)
+          : AxisBuilder::buildValueAxis(globalX,
+                                        resolvedResult.sharedXColumnType ==
+                                            ChartEnums::DataType::Date,
+                                        6);
 
-  // ---- X axis ----
-  if (xIsCategory) {
-    const int n = xCategoryAxis.size();
-    // half-step padding keeps end categories off the frame; use {0, n-1}
-    // instead if you don't want the edge gaps.
-    xAxisRange = AxisRange{.min = 0, .max = double(n - 1)};
-    xTicks.reserve(n);
-    for (int i = 0; i < n; ++i) {
-      xTicks.push_back({static_cast<double>(i), xCategoryAxis.labelAt(i)});
-    }
-  } else {
-    const AxisRange base = ValueAxis::calculateRange(globalX);
-    const AxisTicks ticks = ValueAxis::calculateTicks(
-        base, 6,
-        resolvedResult.sharedXColumnType == ChartEnums::DataType::Date);
-    xAxisRange = ticks.ticks.isEmpty()
-                     ? base
-                     : AxisRange{.min = ticks.ticks.at(0).value,
-                                 .max = ticks.ticks.last().value};
-    xTicks.reserve(ticks.ticks.size());
-    for (qsizetype i = 0; i < ticks.ticks.size(); ++i) {
-      xTicks.push_back(
-          {xAxisRange.min + i * ticks.step, ticks.ticks.at(i).label});
-    }
-  }
+  const AxisModel yModel = AxisBuilder::buildValueAxis(globalY);
 
-  // ---- Y axis (value path) ----
-  {
-    const AxisRange base = ValueAxis::calculateRange(globalY);
-    const AxisTicks ticks = ValueAxis::calculateTicks(base);
-    yAxisRange = ticks.ticks.isEmpty()
-                     ? base
-                     : AxisRange{.min = ticks.ticks.at(0).value,
-                                 .max = ticks.ticks.last().value};
-    yTicks.reserve(ticks.ticks.size());
-    for (qsizetype i = 0; i < ticks.ticks.size(); ++i) {
-      yTicks.push_back(
-          {yAxisRange.min + i * ticks.step, ticks.ticks.at(i).label});
-    }
-  }
-
-  m_plotContext.xAxisRange = xAxisRange;
-  m_plotContext.yAxisRange = yAxisRange;
+  m_plotContext.xAxisRange = xModel.range;
+  m_plotContext.yAxisRange = yModel.range;
   m_plotContext.axisPositions =
       ChartEnums::AxisPosition::Left | ChartEnums::AxisPosition::Bottom;
 
-  auto xData = std::make_unique<AxisRenderData>();
-  xData->pos = ChartEnums::AxisPosition::Bottom;
-  xData->ticks.reserve(xTicks.size());
-  for (const AxisTick &t : xTicks) {
-    xData->ticks.push_back(AxisTickRenderData{
-        .pos = QPointF(t.value, yAxisRange.min),
-        .label = t.label,
-    });
-  }
-
-  auto yData = std::make_unique<AxisRenderData>();
-  yData->pos = ChartEnums::AxisPosition::Left;
-  yData->ticks.reserve(yTicks.size());
-  for (const AxisTick &t : yTicks) {
-    yData->ticks.push_back(AxisTickRenderData{
-        .pos = QPointF(xAxisRange.min, t.value),
-        .label = t.label,
-    });
-  }
-  // CP_DEBUG(yData->toString().toStdString());
   package.xAxisPayload = AxisPayload{
-      .data = std::move(xData),
+      .data = AxisBuilder::toRenderData(
+          xModel, ChartEnums::AxisPosition::Bottom, yModel.range.min),
   };
   package.yAxisPayload = AxisPayload{
-      .data = std::move(yData),
+      .data = AxisBuilder::toRenderData(yModel, ChartEnums::AxisPosition::Left,
+                                        xModel.range.min),
   };
 
   m_pendingRenderPackage = std::move(package);
@@ -368,31 +312,6 @@ bool ChartView::rebuildXYSeriesRenderPackage(
 bool ChartView::rebuildPieSeriesRenderPackage(
     const SeriesResolveResult &resolvedSeries) {
   return false;
-}
-
-void ChartView::buildCategoryAxis(const QVector<ResolvedSeriesData> &xySeries,
-                                  bool useX, CategoryAxis &axis) const {
-  for (const ResolvedSeriesData &resolved : xySeries) {
-    if (!resolved.valid) {
-      continue;
-    }
-    auto it = m_snapshots.constFind(resolved.sourceId);
-    if (it == m_snapshots.constEnd()) {
-      continue;
-    }
-    const DataSnapshot &snapshot = it.value();
-    const int col = useX ? resolved.xColumnIndex : resolved.yColumnIndex;
-    if (col < 0 || col >= snapshot.columnCount) {
-      continue;
-    }
-    for (int row = 0; row < snapshot.rowCount; ++row) {
-      const QVariant v = snapshot.valueAt(col, row);
-      if (!v.isValid() || v.isNull()) {
-        continue;
-      }
-      axis.intern(v.toString());
-    }
-  }
 }
 
 std::vector<std::unique_ptr<IOpenGLRenderer>>

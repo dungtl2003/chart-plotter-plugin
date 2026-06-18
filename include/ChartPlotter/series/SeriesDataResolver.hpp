@@ -51,6 +51,9 @@ private:
   ResolvedColumn resolveColumn(const DataSnapshot &snapshot,
                                const ColumnBinding &binding,
                                const QString &role, int seriesIndex) const;
+  void
+  collectSharedXCategories(SeriesResolveResult &result,
+                           const QHash<int, DataSnapshot> &snapshots) const;
 };
 
 } // namespace ChartPlotter

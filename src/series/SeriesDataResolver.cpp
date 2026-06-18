@@ -72,6 +72,10 @@ SeriesDataResolver::resolve(const QVector<int> &xySeriesIndexes,
     return result;
   }
 
+  if (result.sharedXColumnType == ChartEnums::DataType::String) {
+    collectSharedXCategories(result, snapshots);
+  }
+
   result.valid = true;
   return result;
 }
@@ -392,6 +396,32 @@ ResolvedColumn SeriesDataResolver::resolveColumn(const DataSnapshot &snapshot,
   result.valid = true;
 
   return result;
+}
+
+void SeriesDataResolver::collectSharedXCategories(
+    SeriesResolveResult &result,
+    const QHash<int, DataSnapshot> &snapshots) const {
+  for (const ResolvedSeriesData &resolved : result.xySeries) {
+    if (!resolved.valid) {
+      continue;
+    }
+    const auto it = snapshots.constFind(resolved.sourceId);
+    if (it == snapshots.constEnd()) {
+      continue;
+    }
+    const DataSnapshot &snapshot = it.value();
+    const int col = resolved.xColumnIndex;
+    if (col < 0 || col >= snapshot.columnCount) {
+      continue;
+    }
+    for (int row = 0; row < snapshot.rowCount; ++row) {
+      const QVariant v = snapshot.valueAt(col, row);
+      if (!v.isValid() || v.isNull()) {
+        continue;
+      }
+      result.sharedXCategories.intern(v.toString());
+    }
+  }
 }
 
 } // namespace ChartPlotter

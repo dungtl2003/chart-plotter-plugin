@@ -101,23 +101,20 @@ set(CHARTPLOTTER_HEADERS
     include/ChartPlotter/strategy/ISeriesStrategy.hpp
     include/ChartPlotter/strategy/LineSeriesStrategy.hpp
     include/ChartPlotter/strategy/BarSeriesStrategy.hpp
-    include/ChartPlotter/strategy/TriangleSeriesStrategy.hpp
 
     include/ChartPlotter/renderer/IOpenGLRenderer.hpp
     include/ChartPlotter/renderer/OpenGLLineRenderer.hpp
     include/ChartPlotter/renderer/OpenGLBarRenderer.hpp
-    include/ChartPlotter/renderer/OpenGLTriangleRenderer.hpp
-    include/ChartPlotter/renderer/OpenGLValueAxisRenderer.hpp
+    include/ChartPlotter/renderer/OpenGLAxisRenderer.hpp
 
     include/ChartPlotter/factory/ISeriesComponentFactory.hpp
     include/ChartPlotter/factory/LineSeriesComponentFactory.hpp
     include/ChartPlotter/factory/BarSeriesComponentFactory.hpp
     include/ChartPlotter/factory/SeriesComponentFactoryProvider.hpp
-    include/ChartPlotter/factory/TriangleSeriesComponentFactory.hpp
 
     include/ChartPlotter/data/RenderData.hpp
     include/ChartPlotter/data/LineRenderData.hpp
-    include/ChartPlotter/data/ValueAxisRenderData.hpp
+    include/ChartPlotter/data/AxisRenderData.hpp
     include/ChartPlotter/data/DataSource.hpp
     include/ChartPlotter/data/Column.hpp
     include/ChartPlotter/data/DataColumn.hpp
@@ -139,6 +136,7 @@ set(CHARTPLOTTER_HEADERS
     include/ChartPlotter/data/parser/DataParserFactory.hpp
 
     include/ChartPlotter/axis/Axis.hpp
+    include/ChartPlotter/axis/AxisBuilder.hpp
     include/ChartPlotter/axis/ValueAxis.hpp
     include/ChartPlotter/axis/CategoryAxis.hpp
 
@@ -164,17 +162,14 @@ set(CHARTPLOTTER_SOURCES
 
     src/strategy/LineSeriesStrategy.cpp
     src/strategy/BarSeriesStrategy.cpp
-    src/strategy/TriangleSeriesStrategy.cpp
 
     src/renderer/OpenGLLineRenderer.cpp
     src/renderer/OpenGLBarRenderer.cpp
-    src/renderer/OpenGLTriangleRenderer.cpp
-    src/renderer/OpenGLValueAxisRenderer.cpp
+    src/renderer/OpenGLAxisRenderer.cpp
 
     src/factory/LineSeriesComponentFactory.cpp
     src/factory/BarSeriesComponentFactory.cpp
     src/factory/SeriesComponentFactoryProvider.cpp
-    src/factory/TriangleSeriesComponentFactory.cpp
 
     src/data/DataSource.cpp
     src/data/Column.cpp
@@ -184,7 +179,6 @@ set(CHARTPLOTTER_SOURCES
     src/data/DataBufferUpdater.cpp
     src/data/DataManager.cpp
     src/data/DataManagerPool.cpp
-    src/data/DataRange.cpp
 
     src/data/reader/AbstractDataReader.cpp
     src/data/reader/FileDataReader.cpp
@@ -195,6 +189,7 @@ set(CHARTPLOTTER_SOURCES
     src/data/parser/CsvDataParser.cpp
     src/data/parser/DataParserFactory.cpp
 
+    src/axis/AxisBuilder.cpp
     src/axis/ValueAxis.cpp
     src/axis/CategoryAxis.cpp
 
@@ -208,22 +203,10 @@ set(CHARTPLOTTER_SOURCES
 )
 
 set(CHARTPLOTTER_SHADERS
-    shaders/line/test.frag
-    shaders/line/line.vert
-    shaders/line/line.frag
-    shaders/line/line-simple.frag
-    shaders/line/line-alpha.vert
-    shaders/line/line-alpha.frag
     shaders/line/stroke.vert
     shaders/line/stroke.frag
-    shaders/line/stroke-sdf.vert
-    shaders/line/stroke-sdf.frag
     shaders/line/marker.vert
     shaders/line/marker.frag
-    shaders/line/marker-sdf.vert
-    shaders/line/marker-sdf.frag
-    shaders/line/marker-sdf-2.vert
-    shaders/line/marker-sdf-2.frag
     shaders/circle/circle.vert
     shaders/circle/circle.frag
     shaders/circle/circle-sdf.vert

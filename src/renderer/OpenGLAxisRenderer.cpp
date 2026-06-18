@@ -1,4 +1,4 @@
-#include "ChartPlotter/renderer/OpenGLValueAxisRenderer.hpp"
+#include "ChartPlotter/renderer/OpenGLAxisRenderer.hpp"
 #include "ChartPlotter/utils/Gl.hpp"
 #include "ChartPlotter/utils/LoggerManager.hpp"
 #include "ChartPlotter/utils/RenderMath.hpp"
@@ -64,16 +64,16 @@ QPointF mapDataToItem(const QPointF &point, const AxisRange &xRange,
 
 } // namespace
 
-void OpenGLValueAxisRenderer::initialize(QOpenGLExtraFunctions *f) {
-  CP_DEBUG("OpenGLValueAxisRenderer::initialize: Initing OpenGL resources...");
+void OpenGLAxisRenderer::initialize(QOpenGLExtraFunctions *f) {
+  CP_DEBUG("OpenGLAxisRenderer::initialize: Initing OpenGL resources...");
 
   initializePrograms();
   initializeStrokeGeometry(f);
   initializeTextGeometry(f);
 }
 
-void OpenGLValueAxisRenderer::release(QOpenGLExtraFunctions *f) {
-  CP_DEBUG("OpenGLValueAxisRenderer::release: Releasing OpenGL resources...");
+void OpenGLAxisRenderer::release(QOpenGLExtraFunctions *f) {
+  CP_DEBUG("OpenGLAxisRenderer::release: Releasing OpenGL resources...");
 
   if (m_strokeVbo) {
     f->glDeleteBuffers(1, &m_strokeVbo);
@@ -101,7 +101,7 @@ void OpenGLValueAxisRenderer::release(QOpenGLExtraFunctions *f) {
   m_strokeProgram.reset();
 }
 
-void OpenGLValueAxisRenderer::render(const ChartRenderContext &context) {
+void OpenGLAxisRenderer::render(const ChartRenderContext &context) {
   if (!m_strokeProgram || !m_data) {
     return;
   }
@@ -145,7 +145,7 @@ void OpenGLValueAxisRenderer::render(const ChartRenderContext &context) {
   m_strokeProgram->release();
 }
 
-void OpenGLValueAxisRenderer::setData(std::unique_ptr<RenderData> data) {
+void OpenGLAxisRenderer::setData(std::unique_ptr<RenderData> data) {
   if (AxisRenderData *axisData = dynamic_cast<AxisRenderData *>(data.get())) {
     auto _ =
         data.release(); // so it does not track and auto remove the data inside
@@ -153,9 +153,9 @@ void OpenGLValueAxisRenderer::setData(std::unique_ptr<RenderData> data) {
   }
 };
 
-OpenGLValueAxisRenderer::LabelTexture
-OpenGLValueAxisRenderer::rasterizeLabel(const QString &text,
-                                        QOpenGLExtraFunctions *f, float dpr) {
+OpenGLAxisRenderer::LabelTexture
+OpenGLAxisRenderer::rasterizeLabel(const QString &text,
+                                   QOpenGLExtraFunctions *f, float dpr) {
   const QFontMetricsF fm(m_labelFont);
   const float wLogical =
       static_cast<float>(std::ceil(fm.horizontalAdvance(text)));
@@ -190,10 +190,9 @@ OpenGLValueAxisRenderer::rasterizeLabel(const QString &text,
   return LabelTexture{tex, wLogical, hLogical}; // quad uses logical size
 }
 
-OpenGLValueAxisRenderer::LabelTexture
-OpenGLValueAxisRenderer::acquireLabelTexture(const QString &text,
-                                             QOpenGLExtraFunctions *f,
-                                             float dpr) {
+OpenGLAxisRenderer::LabelTexture
+OpenGLAxisRenderer::acquireLabelTexture(const QString &text,
+                                        QOpenGLExtraFunctions *f, float dpr) {
   const auto it = m_labelTextureCache.constFind(text);
   if (it != m_labelTextureCache.constEnd())
     return it.value();
@@ -202,8 +201,8 @@ OpenGLValueAxisRenderer::acquireLabelTexture(const QString &text,
   return lt;
 }
 
-auto OpenGLValueAxisRenderer::resolveTickAnchors(
-    const QVector<Tick> &ticks) const -> QVector<Tick> {
+auto OpenGLAxisRenderer::resolveTickAnchors(const QVector<Tick> &ticks) const
+    -> QVector<Tick> {
   assert(m_data != nullptr);
   const auto *axisData = m_data.get();
 
@@ -228,7 +227,7 @@ auto OpenGLValueAxisRenderer::resolveTickAnchors(
   return anchors;
 }
 
-void OpenGLValueAxisRenderer::buildAxisAndTickVertices(
+void OpenGLAxisRenderer::buildAxisAndTickVertices(
     const ChartRenderContext &context, const QVector<Tick> &ticks) {
   assert(m_data != nullptr);
   const auto &axisData = m_data.get();
@@ -248,9 +247,9 @@ void OpenGLValueAxisRenderer::buildAxisAndTickVertices(
   buildTickVertices(m_axisAndTickVertices, ticks);
 }
 
-void OpenGLValueAxisRenderer::buildAxisVertices(QVector<AxisStrokeVertex> &out,
-                                                const QVector2D &firstPoint,
-                                                const QVector2D &lastPoint) {
+void OpenGLAxisRenderer::buildAxisVertices(QVector<AxisStrokeVertex> &out,
+                                           const QVector2D &firstPoint,
+                                           const QVector2D &lastPoint) {
   assert(m_data != nullptr);
   const auto &axisData = m_data.get();
 
@@ -258,8 +257,8 @@ void OpenGLValueAxisRenderer::buildAxisVertices(QVector<AxisStrokeVertex> &out,
   appendStrokeQuad(out, firstPoint, lastPoint, halfWidth);
 }
 
-void OpenGLValueAxisRenderer::buildTickVertices(QVector<AxisStrokeVertex> &out,
-                                                const QVector<Tick> &ticks) {
+void OpenGLAxisRenderer::buildTickVertices(QVector<AxisStrokeVertex> &out,
+                                           const QVector<Tick> &ticks) {
   assert(m_data != nullptr);
   const auto &axisData = m_data.get();
 
@@ -283,8 +282,8 @@ void OpenGLValueAxisRenderer::buildTickVertices(QVector<AxisStrokeVertex> &out,
   }
 }
 
-void OpenGLValueAxisRenderer::buildGridVertices(
-    const ChartRenderContext &context, const QVector<Tick> &ticks) {
+void OpenGLAxisRenderer::buildGridVertices(const ChartRenderContext &context,
+                                           const QVector<Tick> &ticks) {
   assert(m_data != nullptr);
   assert(ticks.size() > 1);
 
@@ -338,9 +337,10 @@ void OpenGLValueAxisRenderer::buildGridVertices(
   }
 }
 
-void OpenGLValueAxisRenderer::buildLabelVertices(
-    const ChartRenderContext &context, const QVector<Tick> &ticks,
-    QOpenGLExtraFunctions *f, float dpr) {
+void OpenGLAxisRenderer::buildLabelVertices(const ChartRenderContext &context,
+                                            const QVector<Tick> &ticks,
+                                            QOpenGLExtraFunctions *f,
+                                            float dpr) {
   assert(m_data != nullptr);
   const auto *axisData = m_data.get();
 
@@ -384,7 +384,7 @@ void OpenGLValueAxisRenderer::buildLabelVertices(
   }
 }
 
-void OpenGLValueAxisRenderer::uploadStrokeVertices(
+void OpenGLAxisRenderer::uploadStrokeVertices(
     QOpenGLExtraFunctions *f, const QVector<AxisStrokeVertex> &vertices) {
   f->glBindBuffer(GL_ARRAY_BUFFER, m_strokeVbo);
 
@@ -396,7 +396,7 @@ void OpenGLValueAxisRenderer::uploadStrokeVertices(
   f->glBindBuffer(GL_ARRAY_BUFFER, 0);
 }
 
-void OpenGLValueAxisRenderer::drawStrokesAsTriangles(
+void OpenGLAxisRenderer::drawStrokesAsTriangles(
     QOpenGLExtraFunctions *f, const QVector<AxisStrokeVertex> &vertices) {
   if (vertices.empty()) {
     return;
@@ -407,9 +407,9 @@ void OpenGLValueAxisRenderer::drawStrokesAsTriangles(
   f->glBindVertexArray(0);
 }
 
-void OpenGLValueAxisRenderer::drawLabels(QOpenGLExtraFunctions *f,
-                                         const QMatrix4x4 &mvp,
-                                         const QColor &color) {
+void OpenGLAxisRenderer::drawLabels(QOpenGLExtraFunctions *f,
+                                    const QMatrix4x4 &mvp,
+                                    const QColor &color) {
   if (m_labelVertices.isEmpty() || !m_textProgram) {
     return;
   }
@@ -445,8 +445,8 @@ void OpenGLValueAxisRenderer::drawLabels(QOpenGLExtraFunctions *f,
   m_textProgram->release();
 }
 
-void OpenGLValueAxisRenderer::bindStrokeProgram(const QMatrix4x4 &mvp,
-                                                const QColor &color) {
+void OpenGLAxisRenderer::bindStrokeProgram(const QMatrix4x4 &mvp,
+                                           const QColor &color) {
   assert(m_data != nullptr);
   const auto &axisData = m_data.get();
 
@@ -455,8 +455,7 @@ void OpenGLValueAxisRenderer::bindStrokeProgram(const QMatrix4x4 &mvp,
   m_strokeProgram->setUniformValue("u_color", color);
 }
 
-void OpenGLValueAxisRenderer::initializeStrokeGeometry(
-    QOpenGLExtraFunctions *f) {
+void OpenGLAxisRenderer::initializeStrokeGeometry(QOpenGLExtraFunctions *f) {
   f->glGenVertexArrays(1, &m_strokeVao);
   f->glGenBuffers(1, &m_strokeVbo);
 
@@ -472,7 +471,7 @@ void OpenGLValueAxisRenderer::initializeStrokeGeometry(
   f->glBindVertexArray(0);
 }
 
-void OpenGLValueAxisRenderer::initializeTextGeometry(QOpenGLExtraFunctions *f) {
+void OpenGLAxisRenderer::initializeTextGeometry(QOpenGLExtraFunctions *f) {
   f->glGenVertexArrays(1, &m_textVao);
   f->glGenBuffers(1, &m_textVbo);
   f->glBindVertexArray(m_textVao);
@@ -489,7 +488,7 @@ void OpenGLValueAxisRenderer::initializeTextGeometry(QOpenGLExtraFunctions *f) {
   f->glBindVertexArray(0);
 }
 
-void OpenGLValueAxisRenderer::initializePrograms() {
+void OpenGLAxisRenderer::initializePrograms() {
   m_strokeProgram = std::make_unique<QOpenGLShaderProgram>();
 
   const QString strokeVertexShader =
@@ -506,7 +505,7 @@ void OpenGLValueAxisRenderer::initializePrograms() {
   m_textProgram = Gl::createProgram(vs, fs, "TextProgram");
 
   if (!m_strokeProgram || !m_textProgram) {
-    CP_WARN("OpenGLValueAxisRenderer::initialize: failed to create shader "
+    CP_WARN("OpenGLAxisRenderer::initialize: failed to create shader "
             "programs");
     return;
   }

@@ -15,11 +15,6 @@ struct DataRange {
   double max = 0.0;
   bool valid = false;
 
-  QVector<QString> categories;
-  QHash<QString, int> categoryIndex;
-
-  static DataRange makeCategoryRange(const QVector<QVariant> &values);
-
   QString toString() const {
     return QString("DataRange({min = %1, max = %2, valid = %3})")
         .arg(min)

@@ -82,32 +82,6 @@ void appendStrokeQuad(QVector<LineStrokeVertex> &outVertices,
   RenderMath::appendQuad(outVertices, v0, v1, v2, v3);
 }
 
-void appendStrokeCircle(QVector<LineStrokeVertex> &outVertices,
-                        const QVector2D &center, float radius) {
-  if (radius <= RenderMath::Epsilon) {
-    return;
-  }
-
-  for (int i = 0; i < MarkerSegments; ++i) {
-    const float a0 = static_cast<float>(i) /
-                     static_cast<float>(MarkerSegments) * 2.0f * M_PI;
-
-    const float a1 = static_cast<float>(i + 1) /
-                     static_cast<float>(MarkerSegments) * 2.0f * M_PI;
-
-    const QVector2D p0 = center;
-
-    const QVector2D p1 =
-        center + QVector2D(std::cos(a0) * radius, std::sin(a0) * radius);
-
-    const QVector2D p2 =
-        center + QVector2D(std::cos(a1) * radius, std::sin(a1) * radius);
-
-    RenderMath::appendTriangle(outVertices, LineStrokeVertex{p0},
-                               LineStrokeVertex{p1}, LineStrokeVertex{p2});
-  }
-}
-
 QVector<DashRun> buildDashRuns(const QVector<QVector2D> &points,
                                float dashLength, float gapLength) {
   QVector<DashRun> runs;
@@ -396,10 +370,10 @@ void OpenGLLineRenderer::buildMarkerVertices(const QVector<QVector2D> &points) {
     const QVector2D p3 = center + QVector2D(+outerRadius, +outerRadius);
 
     RenderMath::appendQuad(m_markerVertices,
-                           MarkerSdfVertex{.position = p0, .center = center},
-                           MarkerSdfVertex{.position = p1, .center = center},
-                           MarkerSdfVertex{.position = p2, .center = center},
-                           MarkerSdfVertex{.position = p3, .center = center});
+                           MarkerVertex{.position = p0, .center = center},
+                           MarkerVertex{.position = p1, .center = center},
+                           MarkerVertex{.position = p2, .center = center},
+                           MarkerVertex{.position = p3, .center = center});
   }
 }
 
@@ -417,10 +391,10 @@ void OpenGLLineRenderer::uploadStrokeVertices(QOpenGLExtraFunctions *f) {
 void OpenGLLineRenderer::uploadMarkerVertices(QOpenGLExtraFunctions *f) {
   f->glBindBuffer(GL_ARRAY_BUFFER, m_markerVbo);
 
-  f->glBufferData(GL_ARRAY_BUFFER,
-                  static_cast<GLsizeiptr>(m_markerVertices.size() *
-                                          sizeof(MarkerSdfVertex)),
-                  m_markerVertices.data(), GL_DYNAMIC_DRAW);
+  f->glBufferData(
+      GL_ARRAY_BUFFER,
+      static_cast<GLsizeiptr>(m_markerVertices.size() * sizeof(MarkerVertex)),
+      m_markerVertices.data(), GL_DYNAMIC_DRAW);
 
   f->glBindBuffer(GL_ARRAY_BUFFER, 0);
 }
@@ -505,13 +479,13 @@ void OpenGLLineRenderer::initializeMarkerGeometry(QOpenGLExtraFunctions *f) {
 
   f->glEnableVertexAttribArray(0);
   f->glVertexAttribPointer(
-      0, 2, GL_FLOAT, GL_FALSE, sizeof(MarkerSdfVertex),
-      reinterpret_cast<void *>(offsetof(MarkerSdfVertex, position)));
+      0, 2, GL_FLOAT, GL_FALSE, sizeof(MarkerVertex),
+      reinterpret_cast<void *>(offsetof(MarkerVertex, position)));
 
   f->glEnableVertexAttribArray(1);
   f->glVertexAttribPointer(
-      1, 2, GL_FLOAT, GL_FALSE, sizeof(MarkerSdfVertex),
-      reinterpret_cast<void *>(offsetof(MarkerSdfVertex, center)));
+      1, 2, GL_FLOAT, GL_FALSE, sizeof(MarkerVertex),
+      reinterpret_cast<void *>(offsetof(MarkerVertex, center)));
 
   f->glBindBuffer(GL_ARRAY_BUFFER, 0);
   f->glBindVertexArray(0);
@@ -525,10 +499,10 @@ void OpenGLLineRenderer::initializePrograms() {
       Gl::readShaderSource(":/qt/qml/ChartPlotter/shaders/line/stroke.vert");
   const QString strokeFragmentShader =
       Gl::readShaderSource(":/qt/qml/ChartPlotter/shaders/line/stroke.frag");
-  const QString markerVertexShader = Gl::readShaderSource(
-      ":/qt/qml/ChartPlotter/shaders/line/marker-sdf-2.vert");
-  const QString markerFragmentShader = Gl::readShaderSource(
-      ":/qt/qml/ChartPlotter/shaders/line/marker-sdf-2.frag");
+  const QString markerVertexShader =
+      Gl::readShaderSource(":/qt/qml/ChartPlotter/shaders/line/marker.vert");
+  const QString markerFragmentShader =
+      Gl::readShaderSource(":/qt/qml/ChartPlotter/shaders/line/marker.frag");
 
   m_strokeProgram = Gl::createProgram(strokeVertexShader, strokeFragmentShader,
                                       "StrokeProgram");

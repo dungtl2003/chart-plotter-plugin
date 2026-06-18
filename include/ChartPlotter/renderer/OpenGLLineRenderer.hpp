@@ -20,7 +20,7 @@ struct LineStrokeVertex {
   QVector2D p1;       // capsule segment end   (screen space)
 };
 
-struct MarkerSdfVertex {
+struct MarkerVertex {
   QVector2D position;
   QVector2D center;
 };
@@ -44,7 +44,7 @@ private:
   std::unique_ptr<LineRenderData> m_data;
 
   QVector<LineStrokeVertex> m_strokeVertices;
-  QVector<MarkerSdfVertex> m_markerVertices;
+  QVector<MarkerVertex> m_markerVertices;
 
   void buildStrokeVertices(const QVector<QVector2D> &points);
   void buildSolidStrokeVertices(const QVector<QVector2D> &points,

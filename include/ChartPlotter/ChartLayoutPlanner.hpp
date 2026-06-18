@@ -56,6 +56,13 @@ enum class CoordinateSystem {
   Pie,
 };
 
+struct ChartMargins {
+  qreal left = 100;
+  qreal top = 100;
+  qreal right = 100;
+  qreal bottom = 100;
+};
+
 struct ChartLayoutPlan {
 
   bool valid = false;
@@ -64,6 +71,8 @@ struct ChartLayoutPlan {
   CoordinateSystem coordinateSystem = CoordinateSystem::Unknown;
   QVector<int> xySeriesIndexes;
   QVector<int> pieSeriesIndexes;
+
+  ChartMargins plotMargins;
 };
 
 class ChartLayoutPlanner {

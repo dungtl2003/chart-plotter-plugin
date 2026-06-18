@@ -85,7 +85,7 @@ Window {
         }
         // BarSeries {}
 
-        name: "iloveyou"
+        name: "I Love You"
         anchors.fill: parent
     }
 }
