@@ -23,6 +23,7 @@ class GeneralConfig {
   Q_GADGET
 
   Q_PROPERTY(float lineWidth READ lineWidth WRITE setLineWidth)
+  Q_PROPERTY(float antialiasing READ antialiasing WRITE setAntialiasing)
 
 public:
   bool operator==(const GeneralConfig &other) const;
@@ -31,8 +32,12 @@ public:
   float lineWidth() const;
   void setLineWidth(float newWidth);
 
+  float antialiasing() const;
+  void setAntialiasing(float a);
+
 private:
   float m_lineWidth = 5.0f;
+  float m_antialiasing = 1.0f;
 };
 
 class ChartView : public QQuickItem {
@@ -54,6 +59,8 @@ class ChartView : public QQuickItem {
                  titleItemChanged)
   Q_PROPERTY(QQuickItem *legendItem READ legendItem WRITE setLegendItem NOTIFY
                  legendItemChanged)
+
+  Q_PROPERTY(QVariantList seriesList READ seriesList NOTIFY seriesListChanged)
 
 public:
   using RendererCreator = std::function<std::unique_ptr<IOpenGLRenderer>()>;
@@ -88,6 +95,11 @@ public:
   QQuickItem *legendItem() const;
   void setLegendItem(QQuickItem *item);
 
+  QVariantList seriesList() const;
+
+  Q_INVOKABLE void applySettings(qreal globalStrokeWidth,
+                                 qreal globalAntialiasing);
+
 public slots:
   void onDataError(const QString &message);
   void onSnapshotReady(int sourceId, const DataSnapshot &snapshot);
@@ -102,6 +114,7 @@ signals:
   void legendPositionChanged();
   void titleItemChanged();
   void legendItemChanged();
+  void seriesListChanged();
 
 private:
   QPointer<DataManagerPool> m_dataManagerPool = nullptr;

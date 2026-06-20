@@ -13,11 +13,15 @@ void GeneralConfig::setLineWidth(float newLineWidth) {
   m_lineWidth = newLineWidth;
 }
 
-bool GeneralConfig::operator==(const GeneralConfig &other) const {
-  return m_lineWidth == other.lineWidth();
+float GeneralConfig::antialiasing() const { return m_antialiasing; }
+void GeneralConfig::setAntialiasing(float a) { m_antialiasing = a; }
+
+bool GeneralConfig::operator==(const GeneralConfig &o) const {
+  return m_lineWidth == o.m_lineWidth && m_antialiasing == o.m_antialiasing;
 }
 bool GeneralConfig::operator!=(const GeneralConfig &other) const {
-  return m_lineWidth != other.lineWidth();
+  return m_lineWidth != other.lineWidth() ||
+         m_antialiasing != other.m_antialiasing;
 }
 
 ChartView::ChartView(QQuickItem *parent) : QQuickItem(parent) {
@@ -202,6 +206,8 @@ bool ChartView::rebuildXYSeriesRenderPackage(
   SeriesBuildContext buildContext;
   buildContext.xCategories =
       xIsCategory ? &resolvedResult.sharedXCategories : nullptr;
+  buildContext.globalLineWidth = m_generalConfig.lineWidth();
+  buildContext.globalAntialiasing = m_generalConfig.antialiasing();
 
   for (const ResolvedSeriesData &resolved : resolvedResult.xySeries) {
     if (!resolved.valid) {
@@ -622,6 +628,25 @@ void ChartView::setLegendItem(QQuickItem *item) {
   }
   emit legendItemChanged();
   relayout();
+}
+
+QVariantList ChartView::seriesList() const {
+  QVariantList list;
+  list.reserve(m_series.size());
+  for (const auto &s : m_series) {
+    list.append(QVariant::fromValue(static_cast<QObject *>(s.data())));
+  }
+  return list;
+}
+
+void ChartView::applySettings(qreal globalStrokeWidth,
+                              qreal globalAntialiasing) {
+  m_generalConfig.setLineWidth(static_cast<float>(globalStrokeWidth));
+  m_generalConfig.setAntialiasing(static_cast<float>(globalAntialiasing));
+  emit generalConfigChanged();
+  if (m_plan.valid && rebuildRenderPackage()) {
+    update();
+  }
 }
 
 } // namespace ChartPlotter

@@ -84,19 +84,25 @@ std::unique_ptr<RenderData> LineSeriesStrategy::build(
     return data;
   }
 
+  const qreal width = lineSeries->useGlobalStrokeWidth()
+                          ? context.globalLineWidth
+                          : lineSeries->strokeWidth();
+  const qreal aa = lineSeries->useGlobalAntialias() ? context.globalAntialiasing
+                                                    : lineSeries->antialias();
+
   data->marker.color = lineSeries->markerColor();
   data->marker.visible = lineSeries->markerVisible();
   data->stroke.color = lineSeries->strokeColor();
-  data->stroke.width = lineSeries->strokeWidth();
+  data->stroke.width = width;
   data->stroke.pattern = lineSeries->strokePattern();
   data->stroke.dashStyle = DashStyle{
-      .length = std::max(15.0f, data->stroke.width * 3.0f),
-      .gap = std::max(10.0f, data->stroke.width * 2.0f),
+      .length = std::max(15.0f, float(width) * 3.0f),
+      .gap = std::max(10.0f, float(width) * 2.0f),
   };
   data->stroke.dotStyle = DotStyle{
-      .gap = std::max(10.0f, data->stroke.width),
+      .gap = std::max(10.0f, float(width)),
   };
-  data->antialias = lineSeries->antialias();
+  data->antialias = aa;
 
   if (!resolved.valid) {
     CP_WARN("LineSeriesStrategy::build: resolved series is invalid: {}",

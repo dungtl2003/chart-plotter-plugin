@@ -89,6 +89,7 @@ qt_policy(SET QTP0004 NEW)
 set(CHARTPLOTTER_QMLS
     qml/ChartPlotter/Legend.qml
     qml/ChartPlotter/ChartTitle.qml
+    qml/ChartPlotter/ChartSettings.qml
 )
 
 set(CHARTPLOTTER_HEADERS

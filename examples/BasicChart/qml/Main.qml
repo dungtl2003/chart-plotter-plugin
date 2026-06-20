@@ -70,4 +70,11 @@ Window {
             antialias: 2
         }
     }
+
+    ChartSettings {
+        chart: chart
+        anchors.right: parent.right
+        anchors.top: parent.top
+        anchors.margins: 12
+    }
 }

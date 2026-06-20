@@ -12,6 +12,8 @@ struct SeriesBuildContext {
   // Non-null only when the corresponding axis is categorical (String).
   const CategoryAxis *xCategories = nullptr;
   const CategoryAxis *yCategories = nullptr; // reserved for categorical y
+  qreal globalLineWidth = 2.0;
+  qreal globalAntialiasing = 1.0;
 };
 
 class ISeriesStrategy {

@@ -60,6 +60,8 @@ private:
 
   void drawStrokesAsTriangles(QOpenGLExtraFunctions *f);
   void drawMarkersAsTriangles(QOpenGLExtraFunctions *f);
+  void drawStrokes(QOpenGLExtraFunctions *f, const QMatrix4x4 &mvp);
+  void drawMarkers(QOpenGLExtraFunctions *f, const QMatrix4x4 &mvp);
 
   void initializeStrokeGeometry(QOpenGLExtraFunctions *f);
   void initializeMarkerGeometry(QOpenGLExtraFunctions *f);
