@@ -129,12 +129,12 @@ void OpenGLAxisRenderer::render(const ChartRenderContext &context) {
   const float dpr = static_cast<float>(qGuiApp->devicePixelRatio());
 
   buildAxisAndTickVertices(context, ticks);
-  buildGridVertices(context, ticks);
+  // buildGridVertices(context, ticks);
   buildLabelVertices(context, ticks, f, dpr);
 
-  uploadStrokeVertices(f, m_gridVertices);
-  bindStrokeProgram(mvp, axisData->axisColor.lighter(125));
-  drawStrokesAsTriangles(f, m_gridVertices);
+  // uploadStrokeVertices(f, m_gridVertices);
+  // bindStrokeProgram(mvp, axisData->axisColor.lighter(125));
+  // drawStrokesAsTriangles(f, m_gridVertices);
 
   uploadStrokeVertices(f, m_axisAndTickVertices);
   bindStrokeProgram(mvp, axisData->axisColor);
@@ -234,14 +234,12 @@ void OpenGLAxisRenderer::buildAxisAndTickVertices(
 
   m_axisAndTickVertices.clear();
 
-  const auto &firstTick = axisData->ticks.first();
-  const auto &lastTick = axisData->ticks.last();
   const AxisRange xRange = context.xAxisRange;
   const AxisRange yRange = context.yAxisRange;
-  QVector2D firstPoint =
-      QVector2D(mapDataToItem(firstTick.pos, xRange, yRange, context.plotArea));
-  QVector2D lastPoint =
-      QVector2D(mapDataToItem(lastTick.pos, xRange, yRange, context.plotArea));
+  QVector2D firstPoint = QVector2D(mapDataToItem(
+      axisData->minPointInRange, xRange, yRange, context.plotArea));
+  QVector2D lastPoint = QVector2D(mapDataToItem(
+      axisData->maxPointInRange, xRange, yRange, context.plotArea));
 
   buildAxisVertices(m_axisAndTickVertices, firstPoint, lastPoint);
   buildTickVertices(m_axisAndTickVertices, ticks);
@@ -322,18 +320,18 @@ void OpenGLAxisRenderer::buildGridVertices(const ChartRenderContext &context,
     emitLine(ticks.at(i).position);
   }
 
-  const auto &firstTickPos = ticks.first().position;
-  const auto &lastTickPos = ticks.last().position;
+  const auto &firstPos = axisData->minPointInRange;
+  const auto &lastPos = axisData->maxPointInRange;
   if (isVertical) {
     if (!(context.axisPositions & ChartEnums::AxisPosition::Left))
-      emitLine(firstTickPos);
+      emitLine(firstPos);
     if (!(context.axisPositions & ChartEnums::AxisPosition::Right))
-      emitLine(lastTickPos);
+      emitLine(lastPos);
   } else {
     if (!(context.axisPositions & ChartEnums::AxisPosition::Top))
-      emitLine(lastTickPos);
+      emitLine(lastPos);
     if (!(context.axisPositions & ChartEnums::AxisPosition::Bottom))
-      emitLine(firstTickPos);
+      emitLine(firstPos);
   }
 }
 

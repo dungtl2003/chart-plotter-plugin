@@ -20,6 +20,8 @@ struct AxisTickRenderData {
 };
 
 struct AxisRenderData : public RenderData {
+  QPointF minPointInRange;
+  QPointF maxPointInRange;
   QVector<AxisTickRenderData> ticks;
   ChartEnums::AxisPosition pos = ChartEnums::AxisPosition::Left;
   // AxisRenderData

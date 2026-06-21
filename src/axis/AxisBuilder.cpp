@@ -1,5 +1,6 @@
 #include "ChartPlotter/axis/AxisBuilder.hpp"
 #include "ChartPlotter/axis/ValueAxis.hpp"
+#include <qpoint.h>
 
 namespace ChartPlotter {
 
@@ -22,6 +23,9 @@ AxisModel AxisBuilder::buildValueAxis(const DataRange &dataRange, bool isDate,
     // Use the tick's own value, not min + i*step: the latter assumes
     // perfectly uniform spacing anchored at the range min, which is wrong for
     // non-uniform (e.g. date) ticks.
+    // if (t.value >= dataRange.min && t.value <= dataRange.max) {
+    //   model.ticks.push_back({t.value, t.label});
+    // }
     model.ticks.push_back({t.value, t.label});
   }
 
@@ -46,17 +50,25 @@ AxisModel AxisBuilder::buildCategoryAxis(const CategoryAxis &categories) {
 
 std::unique_ptr<AxisRenderData>
 AxisBuilder::toRenderData(const AxisModel &model, ChartEnums::AxisPosition pos,
-                          double baseline) {
+                          double baseline, const AxisRange &range) {
   auto data = std::make_unique<AxisRenderData>();
   data->pos = pos;
 
   const bool vertical = pos == ChartEnums::AxisPosition::Left ||
                         pos == ChartEnums::AxisPosition::Right;
 
+  data->minPointInRange =
+      vertical ? QPointF(baseline, range.min) : QPointF(range.min, baseline);
+  data->maxPointInRange =
+      vertical ? QPointF(baseline, range.max) : QPointF(range.max, baseline);
+
   data->ticks.reserve(model.ticks.size());
   for (const AxisTick &t : model.ticks) {
     // Vertical axes vary along Y at fixed X (=baseline); horizontal axes vary
     // along X at fixed Y (=baseline).
+    if (t.value < range.min || t.value > range.max) {
+      continue;
+    }
     const QPointF p =
         vertical ? QPointF(baseline, t.value) : QPointF(t.value, baseline);
     data->ticks.push_back(AxisTickRenderData{.pos = p, .label = t.label});

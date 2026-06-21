@@ -58,6 +58,22 @@ void appendQuad(QVector<T> &out, const T &v0, const T &v1, const T &v2,
 template <typename T>
 void appendTriangle(QVector<T> &out, const T &v0, const T &v1, const T &v2);
 
+/**
+ * It will try to round the value to one of these value:
+ * 1 * 10^n
+ * 2 * 10^n
+ * 5 * 10^n
+ * 10 * 10^n
+ *
+ * First, calculate exponent: 10^n = value -> n = log10(value)
+ * Then calculate the fraction: fraction = value / 10^n
+ * fraction can only in range (0, 10), so we can round (cell) fraction on that
+ * range to find suitable nice number.
+ *
+ * nice number = nice fraction * 10^n
+ */
+double niceNumber(double value, bool round);
+
 } // namespace RenderMath
 
 } // namespace ChartPlotter

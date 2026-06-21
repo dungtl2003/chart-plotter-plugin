@@ -221,10 +221,10 @@ void OpenGLLineRenderer::render(const ChartRenderContext &context) {
   buildStrokeVertices(points);
   buildMarkerVertices(points);
 
-  drawStrokes(f, mvp);
+  drawStrokes(f, context);
 
   if (lineData->marker.visible) {
-    drawMarkers(f, mvp);
+    drawMarkers(f, context);
   }
 }
 
@@ -365,41 +365,8 @@ void OpenGLLineRenderer::buildMarkerVertices(const QVector<QVector2D> &points) {
   }
 }
 
-void OpenGLLineRenderer::uploadStrokeVertices(QOpenGLExtraFunctions *f) {
-  f->glBindBuffer(GL_ARRAY_BUFFER, m_strokeVbo);
-
-  f->glBufferData(GL_ARRAY_BUFFER,
-                  static_cast<GLsizeiptr>(m_strokeVertices.size() *
-                                          sizeof(LineStrokeVertex)),
-                  m_strokeVertices.data(), GL_DYNAMIC_DRAW);
-
-  f->glBindBuffer(GL_ARRAY_BUFFER, 0);
-}
-
-void OpenGLLineRenderer::uploadMarkerVertices(QOpenGLExtraFunctions *f) {
-  f->glBindBuffer(GL_ARRAY_BUFFER, m_markerVbo);
-
-  f->glBufferData(
-      GL_ARRAY_BUFFER,
-      static_cast<GLsizeiptr>(m_markerVertices.size() * sizeof(MarkerVertex)),
-      m_markerVertices.data(), GL_DYNAMIC_DRAW);
-
-  f->glBindBuffer(GL_ARRAY_BUFFER, 0);
-}
-
-void OpenGLLineRenderer::drawStrokesAsTriangles(QOpenGLExtraFunctions *f) {
-  if (m_strokeVertices.empty()) {
-    return;
-  }
-
-  f->glBindVertexArray(m_strokeVao);
-  f->glDrawArrays(GL_TRIANGLES, 0,
-                  static_cast<GLsizei>(m_strokeVertices.size()));
-  f->glBindVertexArray(0);
-}
-
 void OpenGLLineRenderer::drawStrokes(QOpenGLExtraFunctions *f,
-                                     const QMatrix4x4 &mvp) {
+                                     const ChartRenderContext &context) {
   if (!m_strokeProgram || m_strokeVertices.empty() || !m_data) {
     return;
   }
@@ -413,11 +380,16 @@ void OpenGLLineRenderer::drawStrokes(QOpenGLExtraFunctions *f,
 
   const auto &lineData = m_data.get();
   m_strokeProgram->bind();
-  m_strokeProgram->setUniformValue("u_mvp", mvp);
+  m_strokeProgram->setUniformValue("u_mvp", context.mvp);
   m_strokeProgram->setUniformValue("u_color", lineData->stroke.color);
   m_strokeProgram->setUniformValue("u_antialias", lineData->antialias);
   m_strokeProgram->setUniformValue("u_halfWidth",
                                    lineData->stroke.width * 0.5f);
+  // vec4(left, right, top, bottom)
+  m_strokeProgram->setUniformValue(
+      "u_plotArea",
+      QVector4D(context.plotArea.left(), context.plotArea.right(),
+                context.plotArea.top(), context.plotArea.bottom()));
 
   f->glBindVertexArray(m_strokeVao);
   f->glDrawArrays(GL_TRIANGLES, 0,
@@ -428,7 +400,7 @@ void OpenGLLineRenderer::drawStrokes(QOpenGLExtraFunctions *f,
 }
 
 void OpenGLLineRenderer::drawMarkers(QOpenGLExtraFunctions *f,
-                                     const QMatrix4x4 &mvp) {
+                                     const ChartRenderContext &context) {
   if (!m_markerProgram || m_markerVertices.empty() || !m_data) {
     return;
   }
@@ -442,10 +414,15 @@ void OpenGLLineRenderer::drawMarkers(QOpenGLExtraFunctions *f,
 
   const auto &lineData = m_data.get();
   m_markerProgram->bind();
-  m_markerProgram->setUniformValue("u_mvp", mvp);
+  m_markerProgram->setUniformValue("u_mvp", context.mvp);
   m_markerProgram->setUniformValue("u_color", lineData->marker.color);
   m_markerProgram->setUniformValue("u_radius", lineData->stroke.width);
   m_markerProgram->setUniformValue("u_antialias", lineData->antialias);
+  // vec4(left, right, top, bottom)
+  m_markerProgram->setUniformValue(
+      "u_plotArea",
+      QVector4D(context.plotArea.left(), context.plotArea.right(),
+                context.plotArea.top(), context.plotArea.bottom()));
 
   f->glBindVertexArray(m_markerVao);
   f->glDrawArrays(GL_TRIANGLES, 0,
@@ -453,40 +430,6 @@ void OpenGLLineRenderer::drawMarkers(QOpenGLExtraFunctions *f,
   f->glBindVertexArray(0);
 
   m_markerProgram->release();
-}
-
-void OpenGLLineRenderer::drawMarkersAsTriangles(QOpenGLExtraFunctions *f) {
-  if (m_markerVertices.empty()) {
-    return;
-  }
-
-  f->glBindVertexArray(m_markerVao);
-  f->glDrawArrays(GL_TRIANGLES, 0,
-                  static_cast<GLsizei>(m_markerVertices.size()));
-  f->glBindVertexArray(0);
-}
-
-void OpenGLLineRenderer::bindStrokeProgram(const QMatrix4x4 &mvp) {
-  assert(m_data != nullptr);
-  const auto &lineData = m_data.get();
-
-  m_strokeProgram->bind();
-  m_strokeProgram->setUniformValue("u_mvp", mvp);
-  m_strokeProgram->setUniformValue("u_color", lineData->stroke.color);
-  m_strokeProgram->setUniformValue("u_antialias", lineData->antialias);
-  m_strokeProgram->setUniformValue("u_halfWidth",
-                                   lineData->stroke.width * 0.5f);
-}
-
-void OpenGLLineRenderer::bindMarkerProgram(const QMatrix4x4 &mvp) {
-  assert(m_data != nullptr);
-  const auto &lineData = m_data.get();
-
-  m_markerProgram->bind();
-  m_markerProgram->setUniformValue("u_mvp", mvp);
-  m_markerProgram->setUniformValue("u_color", lineData->marker.color);
-  m_markerProgram->setUniformValue("u_radius", lineData->stroke.width);
-  m_markerProgram->setUniformValue("u_antialias", lineData->antialias);
 }
 
 void OpenGLLineRenderer::initializeStrokeGeometry(QOpenGLExtraFunctions *f) {

@@ -123,15 +123,15 @@ Button {
                     SliderRow {
                         id: gWidth
                         label: "Stroke width"
-                        from: 1
-                        to: 10
+                        from: ChartConstants.LINE_STROKE_WIDTH_MIN
+                        to: ChartConstants.LINE_STROKE_WIDTH_MAX
                         stepSize: 1
                     }
                     SliderRow {
                         id: gAa
                         label: "Antialiasing"
-                        from: 0
-                        to: 4
+                        from: ChartConstants.LINE_AA_MIN
+                        to: ChartConstants.LINE_AA_MAX
                         stepSize: 1
                     }
                 }

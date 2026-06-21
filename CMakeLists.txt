@@ -95,6 +95,7 @@ set(CHARTPLOTTER_QMLS
 set(CHARTPLOTTER_HEADERS
     include/ChartPlotter/ChartView.hpp
     include/ChartPlotter/ChartLayoutPlanner.hpp
+    include/ChartPlotter/ViewportController.hpp
 
     include/ChartPlotter/legend/LegendModel.hpp
 
@@ -132,7 +133,6 @@ set(CHARTPLOTTER_HEADERS
     include/ChartPlotter/data/DataManager.hpp
     include/ChartPlotter/data/DataManagerPool.hpp
     include/ChartPlotter/data/DataReadConfig.hpp
-    include/ChartPlotter/data/DataRange.hpp
 
     include/ChartPlotter/data/reader/AbstractDataReader.hpp
     include/ChartPlotter/data/reader/FileDataReader.hpp
@@ -153,13 +153,18 @@ set(CHARTPLOTTER_HEADERS
     include/ChartPlotter/utils/RenderMath.hpp
     include/ChartPlotter/utils/RenderMath.tpp
     include/ChartPlotter/utils/Variant.hpp
+    include/ChartPlotter/utils/DataRangeCalculator.hpp
 
     include/ChartPlotter/types/ChartEnums.hpp
+    include/ChartPlotter/types/DataRange.hpp
+
+    include/ChartPlotter/constants/ChartConstants.hpp
 )
 
 set(CHARTPLOTTER_SOURCES
     src/ChartView.cpp
     src/ChartLayoutPlanner.cpp
+    src/ViewportController.cpp
 
     src/legend/LegendModel.cpp
 
@@ -210,6 +215,7 @@ set(CHARTPLOTTER_SOURCES
     src/utils/Gl.cpp
     src/utils/RenderMath.cpp
     src/utils/Variant.cpp
+    src/utils/DataRangeCalculator.cpp
 )
 
 set(CHARTPLOTTER_SHADERS
@@ -249,6 +255,7 @@ target_include_directories(${PROJECT_NAME}
 
     PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/include/ChartPlotter
+    ${CMAKE_CURRENT_SOURCE_DIR}/include/ChartPlotter/constants
     ${CMAKE_CURRENT_SOURCE_DIR}/include/ChartPlotter/chart
     ${CMAKE_CURRENT_SOURCE_DIR}/include/ChartPlotter/legend
     ${CMAKE_CURRENT_SOURCE_DIR}/include/ChartPlotter/series
@@ -303,6 +310,7 @@ if(CMAKE_PROJECT_NAME STREQUAL PROJECT_NAME)
     
     if(BUILD_EXAMPLES)
         add_subdirectory(examples/BasicChart)
+        add_subdirectory(examples/LargeDatasetChart)
         add_subdirectory(examples/RealTimeChart)
         add_subdirectory(examples/CategoryLineChart)
         add_subdirectory(examples/DateTimeLineChart)

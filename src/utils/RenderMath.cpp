@@ -48,4 +48,35 @@ double RenderMath::normalize(double value, double min, double max) {
   return (value - min) / range;
 }
 
+double RenderMath::niceNumber(double value, bool round) {
+  double exponent = std::floor(std::log10(value));
+  double fraction = value / std::pow(10.0, exponent);
+
+  double niceFraction;
+
+  if (round) {
+    if (fraction < 1.5) {
+      niceFraction = 1.0;
+    } else if (fraction < 3.0) {
+      niceFraction = 2.0;
+    } else if (fraction < 7.0) {
+      niceFraction = 5.0;
+    } else {
+      niceFraction = 10.0;
+    }
+  } else {
+    if (fraction <= 1.0) {
+      niceFraction = 1.0;
+    } else if (fraction <= 2.0) {
+      niceFraction = 2.0;
+    } else if (fraction <= 5.0) {
+      niceFraction = 5.0;
+    } else {
+      niceFraction = 10.0;
+    }
+  }
+
+  return niceFraction * std::pow(10.0, exponent);
+}
+
 } // namespace ChartPlotter

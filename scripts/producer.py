@@ -6,7 +6,7 @@ import time
 # Configure multiple pipe files
 pipe_files = [
     "/tmp/pipe1",
-    "/tmp/pipe2",
+    # "/tmp/pipe2",
 ]
 
 total_cols = 2

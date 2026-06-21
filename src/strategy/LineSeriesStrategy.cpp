@@ -1,9 +1,11 @@
 #include "ChartPlotter/strategy/LineSeriesStrategy.hpp"
 
+#include "ChartPlotter/constants/ChartConstants.hpp"
 #include "ChartPlotter/data/DataBuffer.hpp"
 #include "ChartPlotter/data/LineRenderData.hpp"
 #include "ChartPlotter/series/LineSeries.hpp"
 #include "ChartPlotter/utils/LoggerManager.hpp"
+#include "ChartPlotter/utils/Variant.hpp"
 
 #include <QDate>
 #include <QDateTime>
@@ -12,65 +14,10 @@
 #include <QVariant>
 #include <QVector>
 
-#include <cmath>
+#include <algorithm>
 #include <memory>
 
 namespace ChartPlotter {
-
-namespace {
-
-void includeValue(DataRange &range, double value) {
-  if (!std::isfinite(value)) {
-    return;
-  }
-
-  if (!range.valid) {
-    range.min = value;
-    range.max = value;
-    range.valid = true;
-    return;
-  }
-
-  range.min = std::min(range.min, value);
-  range.max = std::max(range.max, value);
-}
-
-bool variantToDouble(const QVariant &value, double &out) {
-  bool ok = false;
-  const double result = value.toDouble(&ok);
-
-  if (!ok || !std::isfinite(result)) {
-    return false;
-  }
-
-  out = result;
-  return true;
-}
-
-bool variantToDateNumber(const QVariant &value, double &out) {
-  if (value.canConvert<QDateTime>()) {
-    const QDateTime dt = value.toDateTime();
-
-    if (dt.isValid()) {
-      out = static_cast<double>(dt.toMSecsSinceEpoch());
-      return true;
-    }
-  }
-
-  if (value.canConvert<QDate>()) {
-    const QDate date = value.toDate();
-
-    if (date.isValid()) {
-      out =
-          static_cast<double>(QDateTime(date.startOfDay()).toMSecsSinceEpoch());
-      return true;
-    }
-  }
-
-  return variantToDouble(value, out);
-}
-
-} // namespace
 
 std::unique_ptr<RenderData> LineSeriesStrategy::build(
     const AbstractSeries &series, const ResolvedSeriesData &resolved,
@@ -84,11 +31,15 @@ std::unique_ptr<RenderData> LineSeriesStrategy::build(
     return data;
   }
 
-  const qreal width = lineSeries->useGlobalStrokeWidth()
-                          ? context.globalLineWidth
-                          : lineSeries->strokeWidth();
-  const qreal aa = lineSeries->useGlobalAntialias() ? context.globalAntialiasing
-                                                    : lineSeries->antialias();
+  const qreal width =
+      std::clamp(lineSeries->useGlobalStrokeWidth() ? context.globalLineWidth
+                                                    : lineSeries->strokeWidth(),
+                 ChartConstants::LINE_STROKE_WIDTH_MIN,
+                 ChartConstants::LINE_STROKE_WIDTH_MAX);
+  const qreal aa =
+      std::clamp(lineSeries->useGlobalAntialias() ? context.globalAntialiasing
+                                                  : lineSeries->antialias(),
+                 ChartConstants::LINE_AA_MIN, ChartConstants::LINE_AA_MAX);
 
   data->marker.color = lineSeries->markerColor();
   data->marker.visible = lineSeries->markerVisible();
@@ -153,13 +104,13 @@ std::unique_ptr<RenderData> LineSeriesStrategy::build(
 
     switch (xType) {
     case ChartEnums::DataType::Number:
-      if (!variantToDouble(xValue, x)) {
+      if (!Utils::Variant::variantToDouble(xValue, x)) {
         continue;
       }
       break;
 
     case ChartEnums::DataType::Date:
-      if (!variantToDateNumber(xValue, x)) {
+      if (!Utils::Variant::variantToDateNumber(xValue, x)) {
         continue;
       }
       break;
@@ -183,7 +134,7 @@ std::unique_ptr<RenderData> LineSeriesStrategy::build(
       return data;
     }
 
-    if (!variantToDouble(yValue, y)) {
+    if (!Utils::Variant::variantToDouble(yValue, y)) {
       continue;
     }
 
@@ -194,14 +145,34 @@ std::unique_ptr<RenderData> LineSeriesStrategy::build(
 
     data->points.push_back(QPointF(x, y));
     hasX.insert(x);
-
-    includeValue(data->xRange, x);
-    includeValue(data->yRange, y);
   }
 
   std::sort(data->points.begin(), data->points.end(),
             [](const QPointF &a, const QPointF &b) { return a.x() < b.x(); });
 
+  const double viewMin = context.viewportXRange.min;
+  const double viewMax = context.viewportXRange.max;
+
+  // Find the first point that is >= viewMin
+  auto leftIt = std::lower_bound(
+      data->points.begin(), data->points.end(), viewMin,
+      [](const QPointF &p, double val) { return p.x() < val; });
+  if (leftIt != data->points.begin()) {
+    --leftIt;
+  }
+
+  auto rightIt = std::upper_bound(
+      leftIt, data->points.end(), viewMax,
+      [](double val, const QPointF &p) { return val < p.x(); });
+  if (rightIt != data->points.end()) {
+    ++rightIt;
+  }
+
+  data->points.assign(leftIt, rightIt);
+  for (const auto &p : data->points) {
+    DataRange::includeValue(data->xRange, p.x());
+    DataRange::includeValue(data->yRange, p.y());
+  }
   data->valid = true;
   // CP_DEBUG(data->toString().toStdString());
   return data;

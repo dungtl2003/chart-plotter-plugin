@@ -21,6 +21,22 @@ struct DataRange {
         .arg(max)
         .arg(valid ? "true" : "false");
   };
+
+  static void includeValue(DataRange &range, double value) {
+    if (!std::isfinite(value)) {
+      return;
+    }
+
+    if (!range.valid) {
+      range.min = value;
+      range.max = value;
+      range.valid = true;
+      return;
+    }
+
+    range.min = std::min(range.min, value);
+    range.max = std::max(range.max, value);
+  }
 };
 
 } // namespace ChartPlotter

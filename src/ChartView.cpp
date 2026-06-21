@@ -2,9 +2,10 @@
 
 #include "ChartPlotter/axis/AxisBuilder.hpp"
 #include "ChartPlotter/data/RenderData.hpp"
+#include "ChartPlotter/factory/SeriesComponentFactoryProvider.hpp"
 #include "ChartPlotter/node/ChartRenderNode.hpp"
+#include "ChartPlotter/utils/DataRangeCalculator.hpp"
 #include "ChartPlotter/utils/LoggerManager.hpp"
-#include "factory/SeriesComponentFactoryProvider.hpp"
 
 namespace ChartPlotter {
 
@@ -26,9 +27,11 @@ bool GeneralConfig::operator!=(const GeneralConfig &other) const {
 
 ChartView::ChartView(QQuickItem *parent) : QQuickItem(parent) {
   setFlag(ItemHasContents, true);
+  setAcceptedMouseButtons(Qt::LeftButton);
 
   m_dataManagerPool = new DataManagerPool(this);
   m_legendModel = new LegendModel(this);
+  m_viewportController = new ViewportController(this);
   m_name = QString::fromStdString(appendUniqueId("ChartView_EarlyInit_"));
   m_logger = LoggerManager::createInstanceLogger(m_name.toStdString());
   connect(m_dataManagerPool, &DataManagerPool::errorOccurred, this,
@@ -82,6 +85,124 @@ void ChartView::componentComplete() {
 void ChartView::geometryChange(const QRectF &newGeom, const QRectF &oldGeom) {
   QQuickItem::geometryChange(newGeom, oldGeom);
   relayout();
+}
+
+void ChartView::wheelEvent(QWheelEvent *event) {
+  // if (!(event->modifiers() & Qt::ControlModifier)) {
+  //   QQuickItem::wheelEvent(event);
+  //   return;
+  // }
+
+  /**
+   * When you scroll a standard mouse wheel by one physical notch, the operating
+   * system and Qt do not return 1. Instead, they return a standard metric value
+   * of 120 units.
+   *
+   * This 120 value is an industry-standard constant designed to allow
+   * high-precision mice or smooth-scrolling trackpads to send smaller
+   * fractional movements (e.g., sending 30 units four times instead of one
+   * large chunk of 120).
+   *
+   * Most standard mouse wheels have 24 notches in a full 360 degree rotation
+   * circle.
+   *
+   * 360 degree / 24 notches = 15 degree per notch
+   *
+   * Because the hardware sends a value of 120 for that exact same notch, we can
+   * find the mathematical relationship between hardware units and real-world
+   * angles:
+   *
+   * 120 hardware units / 15 degree = 8
+   *
+   * Therefore, dividing the raw value by 8 converts hardware units directly
+   * into geometric degrees.
+   */
+  QPoint numDegrees = event->angleDelta() / 8;
+  QPoint numSteps = numDegrees / 15;
+  QPointF mousePos = event->position();
+
+  if (numSteps.isNull() || mousePos.isNull() || numSteps.y() == 0) {
+    return;
+  }
+
+  if (!m_viewportController || !m_plotContext.plotArea.isValid()) {
+    return;
+  }
+
+  if (!m_plotContext.plotArea.contains(mousePos)) {
+    return;
+  }
+
+  m_viewportController->zoom(m_plotContext.plotArea, mousePos, numSteps.y());
+  if (m_plan.valid && rebuildRenderPackage()) {
+    update();
+  }
+
+  event->accept();
+}
+
+void ChartView::mousePressEvent(QMouseEvent *event) {
+  if (event->button() != Qt::LeftButton) {
+    QQuickItem::mousePressEvent(event);
+    return;
+  }
+
+  m_isPanning = true;
+  m_panLastMousePos = event->position();
+  m_lockedYRange = m_plotContext.yRange;
+  grabMouse(); // Capture all mouse events
+  event->accept();
+}
+
+void ChartView::mouseMoveEvent(QMouseEvent *event) {
+  if (!m_isPanning || !(event->buttons() & Qt::LeftButton)) {
+    QQuickItem::mouseMoveEvent(event);
+    return;
+  }
+
+  QPointF mousePos = event->position();
+  if (mousePos.isNull()) {
+    QQuickItem::mouseMoveEvent(event);
+    return;
+  }
+
+  if (!m_viewportController || !m_plotContext.plotArea.isValid()) {
+    return;
+  }
+
+  if (!m_plotContext.plotArea.contains(mousePos)) {
+    return;
+  }
+
+  QPointF delta = mousePos - m_panLastMousePos;
+  const double deltaX = delta.x();
+  if (std::abs(deltaX) == 0) {
+    return;
+  }
+
+  m_viewportController->pan(m_plotContext.plotArea, deltaX);
+  m_panLastMousePos = mousePos;
+  if (m_plan.valid && rebuildRenderPackage()) {
+    update();
+  }
+
+  event->accept();
+}
+
+void ChartView::mouseReleaseEvent(QMouseEvent *event) {
+  if (!m_isPanning) {
+    QQuickItem::mouseReleaseEvent(event);
+    return;
+  }
+
+  m_isPanning = false;
+
+  if (m_plan.valid && rebuildRenderPackage()) {
+    update();
+  }
+
+  ungrabMouse(); // Release the mouse capture
+  event->accept();
 }
 
 void ChartView::onDataError(const QString &message) {
@@ -181,6 +302,10 @@ bool ChartView::rebuildRenderPackage() {
     return false;
   }
 
+  if (m_viewportController && m_resolvedSeries.absoluteXRange.valid) {
+    m_viewportController->setRange(m_resolvedSeries.absoluteXRange);
+  }
+
   if (m_plan.coordinateSystem == CoordinateSystem::Cartesian) {
     return rebuildXYSeriesRenderPackage(m_resolvedSeries);
   }
@@ -197,7 +322,8 @@ bool ChartView::rebuildXYSeriesRenderPackage(
     const SeriesResolveResult &resolvedResult) {
   ChartRenderPackage package;
 
-  DataRange globalX;
+  DataRange globalX = resolvedResult.absoluteXRange;
+  // we will recalculate y range by points accept from x range
   DataRange globalY;
 
   const bool xIsCategory =
@@ -208,6 +334,11 @@ bool ChartView::rebuildXYSeriesRenderPackage(
       xIsCategory ? &resolvedResult.sharedXCategories : nullptr;
   buildContext.globalLineWidth = m_generalConfig.lineWidth();
   buildContext.globalAntialiasing = m_generalConfig.antialiasing();
+
+  if (m_viewportController && m_viewportController->getVisibleRange().valid) {
+    buildContext.viewportXRange = m_viewportController->getVisibleRange();
+    globalX = buildContext.viewportXRange;
+  }
 
   for (const ResolvedSeriesData &resolved : resolvedResult.xySeries) {
     if (!resolved.valid) {
@@ -244,7 +375,6 @@ bool ChartView::rebuildXYSeriesRenderPackage(
     }
 
     auto snapshotIt = m_snapshots.constFind(resolved.sourceId);
-
     if (snapshotIt == m_snapshots.constEnd()) {
       m_logger->warn(
           "ChartView::rebuildXYSeriesRenderPackage: missing snapshot for "
@@ -284,8 +414,11 @@ bool ChartView::rebuildXYSeriesRenderPackage(
       continue;
     }
 
-    globalX = unionRange(globalX, xyData->xRange);
-    globalY = unionRange(globalY, xyData->yRange);
+    if (!xyData->yRange.valid) {
+      globalY = xyData->yRange;
+    } else {
+      globalY = DataRangeCalculator::unionRange(globalY, xyData->yRange);
+    }
 
     SeriesRenderPayload payload;
     payload.seriesIndex = seriesIndex;
@@ -307,6 +440,11 @@ bool ChartView::rebuildXYSeriesRenderPackage(
     return false;
   }
 
+  if (m_isPanning && m_lockedYRange.valid) {
+    globalY = m_lockedYRange;
+    // m_logger->debug("OVERRIDEEEE");
+  }
+
   m_plotContext.xRange = globalX;
   m_plotContext.yRange = globalY;
 
@@ -319,19 +457,22 @@ bool ChartView::rebuildXYSeriesRenderPackage(
                                         6);
 
   const AxisModel yModel = AxisBuilder::buildValueAxis(globalY);
+  // m_logger->debug("globalY = ({}, {})", globalY.min, globalY.max);
+  // m_logger->debug("yModel = ({}, {})", yModel.range.min, yModel.range.max);
 
-  m_plotContext.xAxisRange = xModel.range;
+  m_plotContext.xAxisRange = AxisRange::fromDataRange(globalX);
   m_plotContext.yAxisRange = yModel.range;
   m_plotContext.axisPositions =
       ChartEnums::AxisPosition::Left | ChartEnums::AxisPosition::Bottom;
 
   package.xAxisPayload = AxisPayload{
       .data = AxisBuilder::toRenderData(
-          xModel, ChartEnums::AxisPosition::Bottom, yModel.range.min),
+          xModel, ChartEnums::AxisPosition::Bottom, yModel.range.min,
+          AxisRange::fromDataRange(globalX)),
   };
   package.yAxisPayload = AxisPayload{
       .data = AxisBuilder::toRenderData(yModel, ChartEnums::AxisPosition::Left,
-                                        xModel.range.min),
+                                        globalX.min, yModel.range),
   };
 
   m_pendingRenderPackage = std::move(package);
@@ -376,23 +517,6 @@ qsizetype ChartView::contentCount(QQmlListProperty<QObject> *property) {
   }
 
   return chartView->m_content.size();
-}
-
-DataRange ChartView::unionRange(const DataRange &a, const DataRange &b) const {
-  if (!a.valid) {
-    return b;
-  }
-
-  if (!b.valid) {
-    return a;
-  }
-
-  DataRange result = a;
-  result.min = std::min(a.min, b.min);
-  result.max = std::max(a.max, b.max);
-  result.valid = true;
-
-  return result;
 }
 
 QObject *ChartView::contentAt(QQmlListProperty<QObject> *property,

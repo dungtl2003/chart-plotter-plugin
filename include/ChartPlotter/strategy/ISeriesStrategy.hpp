@@ -1,10 +1,10 @@
 #pragma once
 
 #include "ChartPlotter/axis/CategoryAxis.hpp"
+#include "ChartPlotter/data/DataBuffer.hpp"
 #include "ChartPlotter/data/RenderData.hpp"
 #include "ChartPlotter/series/AbstractSeries.hpp"
 #include "ChartPlotter/series/ResolvedSeriesData.hpp"
-#include "DataBuffer.hpp"
 
 namespace ChartPlotter {
 
@@ -14,6 +14,7 @@ struct SeriesBuildContext {
   const CategoryAxis *yCategories = nullptr; // reserved for categorical y
   qreal globalLineWidth = 2.0;
   qreal globalAntialiasing = 1.0;
+  DataRange viewportXRange;
 };
 
 class ISeriesStrategy {

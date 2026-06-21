@@ -1,6 +1,7 @@
 #pragma once
 
 #include "ChartPlotter/ChartLayoutPlanner.hpp"
+#include "ChartPlotter/ViewportController.hpp"
 #include "ChartPlotter/data/DataBuffer.hpp"
 #include "ChartPlotter/data/DataManagerPool.hpp"
 #include "ChartPlotter/data/DataSource.hpp"
@@ -106,6 +107,10 @@ public slots:
 
 protected:
   void geometryChange(const QRectF &newGeom, const QRectF &oldGeom) override;
+  void wheelEvent(QWheelEvent *event) override;
+  void mousePressEvent(QMouseEvent *event) override;
+  void mouseMoveEvent(QMouseEvent *event) override;
+  void mouseReleaseEvent(QMouseEvent *event) override;
 
 signals:
   void nameChanged();
@@ -122,6 +127,7 @@ private:
   QList<QPointer<QObject>> m_content;
   QVector<QPointer<AbstractSeries>> m_series;
   QVector<QPointer<DataSource>> m_sources;
+  QPointer<ViewportController> m_viewportController;
   QString m_name;
   GeneralConfig m_generalConfig;
   std::vector<std::unique_ptr<ISeriesStrategy>> m_strategies;
@@ -139,13 +145,16 @@ private:
   QPointer<QQuickItem> m_legendItem;
   QRectF m_plotOuterRect;
 
+  bool m_isPanning = false;
+  QPointF m_panLastMousePos;
+  DataRange m_lockedYRange;
+
   void dropLogger();
   std::string appendUniqueId(std::string s) const;
   void resetStrategies();
   bool rebuildRenderPackage();
   bool rebuildXYSeriesRenderPackage(const SeriesResolveResult &resolvedSeries);
   bool rebuildPieSeriesRenderPackage(const SeriesResolveResult &resolvedSeries);
-  DataRange unionRange(const DataRange &a, const DataRange &b) const;
   std::vector<std::unique_ptr<IOpenGLRenderer>> createRenderersFromPlan() const;
   static void appendContent(QQmlListProperty<QObject> *property,
                             QObject *object);

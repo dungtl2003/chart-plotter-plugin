@@ -1,4 +1,5 @@
 #include "ChartPlotter/series/SeriesDataResolver.hpp"
+#include "ChartPlotter/utils/DataRangeCalculator.hpp"
 
 namespace ChartPlotter {
 
@@ -75,6 +76,8 @@ SeriesDataResolver::resolve(const QVector<int> &xySeriesIndexes,
   if (result.sharedXColumnType == ChartEnums::DataType::String) {
     collectSharedXCategories(result, snapshots);
   }
+
+  calculateAbsoluteBounds(result, snapshots);
 
   result.valid = true;
   return result;
@@ -421,6 +424,41 @@ void SeriesDataResolver::collectSharedXCategories(
       }
       result.sharedXCategories.intern(v.toString());
     }
+  }
+}
+
+void SeriesDataResolver::calculateAbsoluteBounds(
+    SeriesResolveResult &result,
+    const QHash<int, DataSnapshot> &snapshots) const {
+
+  result.absoluteXRange = {};
+  result.absoluteYRange = {};
+
+  for (ResolvedSeriesData &resolved : result.xySeries) {
+    if (!resolved.valid) {
+      continue;
+    }
+
+    const auto it = snapshots.constFind(resolved.sourceId);
+    if (it == snapshots.constEnd()) {
+      continue;
+    }
+
+    const DataSnapshot &snapshot = it.value();
+
+    // Calculate X bounds. Pass the shared categories for String types.
+    resolved.absoluteXRange = DataRangeCalculator::calculateColumnRange(
+        snapshot, resolved.xColumnIndex, resolved.xColumnType,
+        &result.sharedXCategories);
+
+    // Calculate Y bounds. Y is always Number, so categories are nullptr.
+    resolved.absoluteYRange = DataRangeCalculator::calculateColumnRange(
+        snapshot, resolved.yColumnIndex, resolved.yColumnType, nullptr);
+
+    result.absoluteXRange = DataRangeCalculator::unionRange(
+        result.absoluteXRange, resolved.absoluteXRange);
+    result.absoluteYRange = DataRangeCalculator::unionRange(
+        result.absoluteYRange, resolved.absoluteYRange);
   }
 }
 

@@ -55,13 +55,8 @@ private:
                                  QVector<LineStrokeVertex> &outVertices);
   void buildMarkerVertices(const QVector<QVector2D> &points);
 
-  void uploadStrokeVertices(QOpenGLExtraFunctions *f);
-  void uploadMarkerVertices(QOpenGLExtraFunctions *f);
-
-  void drawStrokesAsTriangles(QOpenGLExtraFunctions *f);
-  void drawMarkersAsTriangles(QOpenGLExtraFunctions *f);
-  void drawStrokes(QOpenGLExtraFunctions *f, const QMatrix4x4 &mvp);
-  void drawMarkers(QOpenGLExtraFunctions *f, const QMatrix4x4 &mvp);
+  void drawStrokes(QOpenGLExtraFunctions *f, const ChartRenderContext &context);
+  void drawMarkers(QOpenGLExtraFunctions *f, const ChartRenderContext &context);
 
   void initializeStrokeGeometry(QOpenGLExtraFunctions *f);
   void initializeMarkerGeometry(QOpenGLExtraFunctions *f);

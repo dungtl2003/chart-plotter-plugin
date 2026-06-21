@@ -54,6 +54,9 @@ private:
   void
   collectSharedXCategories(SeriesResolveResult &result,
                            const QHash<int, DataSnapshot> &snapshots) const;
+
+  void calculateAbsoluteBounds(SeriesResolveResult &result,
+                               const QHash<int, DataSnapshot> &snapshots) const;
 };
 
 } // namespace ChartPlotter

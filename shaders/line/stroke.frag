@@ -7,8 +7,19 @@ in vec2 v_p1;
 uniform vec4  u_color;
 uniform float u_halfWidth;   // line half-width, pixels
 uniform float u_antialias;   // feather width, pixels
+// vec4(left, right, top, bottom)
+uniform vec4 u_plotArea;
 
 out vec4 fragColor;
+
+bool inBound(vec2 p, vec4 boundary) {
+    float minX = min(boundary.x, boundary.y);
+    float maxX = max(boundary.x, boundary.y);
+    float minY = min(boundary.z, boundary.w);
+    float maxY = max(boundary.z, boundary.w);
+    
+    return p.x >= minX && p.x <= maxX && p.y >= minY && p.y <= maxY;
+}
 
 float sdSegment(vec2 p, vec2 a, vec2 b) {
     vec2 pa = p - a;
@@ -19,6 +30,10 @@ float sdSegment(vec2 p, vec2 a, vec2 b) {
 }
 
 void main() {
+    if(!inBound(v_pos, u_plotArea)) {
+        discard;
+    }
+
     float dist = sdSegment(v_pos, v_p0, v_p1) - u_halfWidth;
 
     // at least 1px of feather regardless of zoom, then fade outward over `aa`

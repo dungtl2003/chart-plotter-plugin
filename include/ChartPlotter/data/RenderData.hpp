@@ -1,8 +1,8 @@
 #pragma once
 
 #include "ChartPlotter/axis/Axis.hpp"
-#include "ChartPlotter/data/DataRange.hpp"
 #include "ChartPlotter/types/ChartEnums.hpp"
+#include "ChartPlotter/types/DataRange.hpp"
 
 #include <QRectF>
 

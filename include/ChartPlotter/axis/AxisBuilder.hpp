@@ -15,7 +15,7 @@ public:
 
   static std::unique_ptr<AxisRenderData>
   toRenderData(const AxisModel &model, ChartEnums::AxisPosition pos,
-               double baseline);
+               double baseline, const AxisRange &range);
 };
 
 } // namespace ChartPlotter

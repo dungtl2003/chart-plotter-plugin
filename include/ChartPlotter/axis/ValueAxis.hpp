@@ -1,7 +1,7 @@
 #pragma once
 
 #include "ChartPlotter/axis/Axis.hpp"
-#include "ChartPlotter/data/DataRange.hpp"
+#include "ChartPlotter/types/DataRange.hpp"
 
 #include <QString>
 #include <QVector>
@@ -17,7 +17,6 @@ public:
   static AxisRange calculateRange(const DataRange &dataRange);
 
 private:
-  static double niceNumber(double value, bool round);
   static QString formatTickLabel(double value, double step);
 };
 
