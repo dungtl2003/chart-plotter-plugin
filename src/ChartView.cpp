@@ -807,7 +807,10 @@ void ChartView::applySettings(float globalStrokeWidth, float globalAntialiasing,
   m_generalConfig.setYPreferredTickCount(yPreferredTickCount);
 
   emit generalConfigChanged();
+
   if (m_plan.valid && rebuildRenderPackage()) {
+    // user can change line color and make legend changes
+    rebuildLegendModel();
     update();
   }
 }

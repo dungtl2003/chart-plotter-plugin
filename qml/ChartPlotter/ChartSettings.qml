@@ -61,6 +61,7 @@ Button {
         for (let i = 0; i < list.length && i < lines.count; ++i) {
             const d = lines.get(i), s = list[i];
             s.useGlobalStrokeWidth = d.useGlobalWidth;
+            s.strokeColor = d.swatch;
             s.strokeWidth = d.width;
             s.useGlobalAntialias = d.useGlobalAa;
             s.antialias = d.aa;
@@ -227,6 +228,7 @@ Button {
 
                         // ---- markers ----
                         CheckBox {
+                            id: markerCheckbox
                             text: "Show markers"
                             checked: card.model.showMarker
                             onToggled: lines.setProperty(card.line, "showMarker", checked)
@@ -246,9 +248,35 @@ Button {
                                 border.width: 1
                                 TapHandler {
                                     onTapped: {
-                                        colorDlg.line = card.line;
-                                        colorDlg.selectedColor = card.model.marker;
-                                        colorDlg.open();
+                                        if (!markerCheckbox.checked) {
+                                            return;
+                                        }
+
+                                        markerColorDlg.line = card.line;
+                                        markerColorDlg.selectedColor = card.model.marker;
+                                        markerColorDlg.open();
+                                    }
+                                }
+                            }
+                        }
+
+                        RowLayout {
+                            Label {
+                                text: "Line color"
+                                Layout.fillWidth: true
+                            }
+                            Rectangle {
+                                Layout.preferredWidth: 34
+                                Layout.preferredHeight: 22
+                                radius: 4
+                                color: card.model.swatch
+                                border.color: "#cfcfd6"
+                                border.width: 1
+                                TapHandler {
+                                    onTapped: {
+                                        swatchColorDlg.line = card.line;
+                                        swatchColorDlg.selectedColor = card.model.swatch;
+                                        swatchColorDlg.open();
                                     }
                                 }
                             }
@@ -290,10 +318,17 @@ Button {
         }
 
         ColorDialog {
-            id: colorDlg
+            id: markerColorDlg
             property int line: -1
             onAccepted: if (line >= 0)
                 lines.setProperty(line, "marker", "" + selectedColor)
+        }
+
+        ColorDialog {
+            id: swatchColorDlg
+            property int line: -1
+            onAccepted: if (line >= 0)
+                lines.setProperty(line, "swatch", "" + selectedColor)
         }
     }
 }
