@@ -322,6 +322,10 @@ bool ChartView::rebuildXYSeriesRenderPackage(
     const SeriesResolveResult &resolvedResult) {
   ChartRenderPackage package;
 
+  /**
+   * We will render all points limit by visible X range. Visible Y range will
+   * depend on points that satisfied X range.
+   */
   DataRange globalX = resolvedResult.absoluteXRange;
   // we will recalculate y range by points accept from x range
   DataRange globalY;
@@ -442,7 +446,6 @@ bool ChartView::rebuildXYSeriesRenderPackage(
 
   if (m_isPanning && m_lockedYRange.valid) {
     globalY = m_lockedYRange;
-    // m_logger->debug("OVERRIDEEEE");
   }
 
   m_plotContext.xRange = globalX;
@@ -455,11 +458,16 @@ bool ChartView::rebuildXYSeriesRenderPackage(
                                         resolvedResult.sharedXColumnType ==
                                             ChartEnums::DataType::Date,
                                         6);
-
   const AxisModel yModel = AxisBuilder::buildValueAxis(globalY);
-  // m_logger->debug("globalY = ({}, {})", globalY.min, globalY.max);
-  // m_logger->debug("yModel = ({}, {})", yModel.range.min, yModel.range.max);
 
+  /**
+   * X axis range will follow the visible range we want, while Y axis range
+   * will depend on points that in visible X range (except when we are panning
+   * then y range is locked).
+   *
+   * Basically, X axis range IS visible data range, Y axis range will be
+   * calculated based on that.
+   */
   m_plotContext.xAxisRange = AxisRange::fromDataRange(globalX);
   m_plotContext.yAxisRange = yModel.range;
   m_plotContext.axisPositions =

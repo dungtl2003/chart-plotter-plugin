@@ -20,6 +20,13 @@ public:
   void pan(QRectF viewport, double deltaXPixels);
 
 private:
+  /**
+   * Note that visible range can be bigger, smaller or the same as data range.
+   * They are not neccessary need to be matched.
+   *
+   * E.g. Data range is 14 - 180, visible range can be 0 - 200 for nice view. If
+   * we zoom the data, visible range can be 50 - 100.
+   */
   DataRange m_dataRange;
   DataRange m_visibleDataRange;
   bool m_isAutoScaled = true;
