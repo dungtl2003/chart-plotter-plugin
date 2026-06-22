@@ -233,6 +233,8 @@ void OpenGLLineRenderer::setData(std::unique_ptr<RenderData> data) {
     auto _ =
         data.release(); // so it does not track and auto remove the data inside
     m_data = std::unique_ptr<LineRenderData>(lineData);
+  } else {
+    m_data = nullptr;
   }
 };
 

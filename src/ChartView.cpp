@@ -101,6 +101,11 @@ void ChartView::componentComplete() {
   }
 
   relayout();
+
+  // Force the initial empty render package build
+  if (m_plan.valid && rebuildRenderPackage()) {
+    update();
+  }
 }
 
 void ChartView::geometryChange(const QRectF &newGeom, const QRectF &oldGeom) {
@@ -396,6 +401,7 @@ bool ChartView::rebuildXYSeriesRenderPackage(
     }
 
     if (m_legendModel && !m_legendModel->isVisible(seriesIndex)) {
+      // m_logger->debug("series {} is hidden", seriesIndex);
       continue;
     }
 
@@ -458,10 +464,10 @@ bool ChartView::rebuildXYSeriesRenderPackage(
   }
 
   if (package.seriesPayloads.empty()) {
-    m_logger->warn(
-        "ChartView::rebuildXYSeriesRenderPackage: no valid XY series render "
-        "payloads");
-    return false;
+    m_logger->info("ChartView::rebuildXYSeriesRenderPackage: no valid XY "
+                   "series render payloads, rendering empty axes");
+    globalX = DataRange{.min = 0, .max = 1, .valid = true};
+    globalY = DataRange{.min = 0, .max = 1, .valid = true};
   }
 
   if (!globalX.valid || !globalY.valid) {
@@ -472,6 +478,30 @@ bool ChartView::rebuildXYSeriesRenderPackage(
 
   if (m_isPanning && m_lockedYRange.valid) {
     globalY = m_lockedYRange;
+  }
+
+  // m_logger->debug("globalX = {}, globalY = {}",
+  //                 globalX.toString().toStdString(),
+  //                 globalY.toString().toStdString());
+
+  // Special case: only 1 point
+  if (globalX.min == globalX.max) {
+    if (globalX.min == 0) {
+      globalX.min = -1;
+      globalX.max = 1;
+    } else {
+      globalX.min = globalX.min * 0.9;
+      globalX.max = globalX.max * 1.1;
+    }
+  }
+  if (globalY.min == globalY.max) {
+    if (globalY.min == 0) {
+      globalY.min = -1;
+      globalY.max = 1;
+    } else {
+      globalY.min = globalY.min * 0.9;
+      globalY.max = globalY.max * 1.1;
+    }
   }
 
   m_plotContext.xRange = globalX;

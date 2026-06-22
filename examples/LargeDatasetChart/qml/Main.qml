@@ -31,7 +31,6 @@ Window {
             url: "file:///home/ilikeblue/personal/projects/chart-plotter-plugin/temp/large.csv"
             format: ChartEnums.DataFormat.Csv
             skipRows: 0
-            hasHeader: true
         }
 
         LineSeries {

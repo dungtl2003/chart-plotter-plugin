@@ -112,6 +112,11 @@ void ChartRenderNode::setRenderPackage(ChartRenderPackage package) {
   if (m_yAxisRenderer) {
     m_yAxisRenderer->setData(std::move(package.yAxisPayload.data));
   }
+
+  for (auto &renderer : m_renderers) {
+    renderer->setData(nullptr);
+  }
+
   for (auto &payload : package.seriesPayloads) {
     if (payload.seriesIndex < 0 ||
         payload.seriesIndex >= static_cast<int>(m_renderers.size())) {

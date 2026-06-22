@@ -113,11 +113,20 @@ ResolvedSeriesData SeriesDataResolver::resolveXYSeries(
     return result;
   }
 
+  // if (!snapshots.contains(sourceId)) {
+  //   result.errorMessage =
+  //       QString("XY series %1 has no snapshot yet for sourceId %2")
+  //           .arg(seriesIndex)
+  //           .arg(sourceId);
+  //   return result;
+  // }
+
+  // Special case: no data yet
   if (!snapshots.contains(sourceId)) {
-    result.errorMessage =
-        QString("XY series %1 has no snapshot yet for sourceId %2")
-            .arg(seriesIndex)
-            .arg(sourceId);
+    result.sourceId = sourceId;
+    result.xColumnType = ChartEnums::DataType::Number;
+    result.yColumnType = ChartEnums::DataType::Number;
+    result.valid = true;
     return result;
   }
 
