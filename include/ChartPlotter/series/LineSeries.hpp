@@ -12,7 +12,7 @@ class LineSeries : public XYSeries {
 
   Q_PROPERTY(QColor strokeColor READ strokeColor WRITE setStrokeColor NOTIFY
                  strokeColorChanged)
-  Q_PROPERTY(qreal strokeWidth READ strokeWidth WRITE setStrokeWidth NOTIFY
+  Q_PROPERTY(float strokeWidth READ strokeWidth WRITE setStrokeWidth NOTIFY
                  strokeWidthChanged)
   Q_PROPERTY(
       ChartPlotter::ChartEnums::StrokePattern strokePattern READ strokePattern
@@ -76,7 +76,7 @@ signals:
 
 private:
   QColor m_strokeColor = QColor("#ff3333");
-  qreal m_strokeWidth = 3.0f;
+  float m_strokeWidth = 3.0f;
   bool m_useGlobalStrokeWidth = true;
   bool m_useGlobalAntialias = true;
   ChartEnums::StrokePattern m_strokePattern = ChartEnums::StrokePattern::Solid;

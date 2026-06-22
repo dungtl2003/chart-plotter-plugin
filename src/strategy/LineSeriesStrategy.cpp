@@ -31,15 +31,11 @@ std::unique_ptr<RenderData> LineSeriesStrategy::build(
     return data;
   }
 
-  const qreal width =
-      std::clamp(lineSeries->useGlobalStrokeWidth() ? context.globalLineWidth
-                                                    : lineSeries->strokeWidth(),
-                 ChartConstants::LINE_STROKE_WIDTH_MIN,
-                 ChartConstants::LINE_STROKE_WIDTH_MAX);
-  const qreal aa =
-      std::clamp(lineSeries->useGlobalAntialias() ? context.globalAntialiasing
-                                                  : lineSeries->antialias(),
-                 ChartConstants::LINE_AA_MIN, ChartConstants::LINE_AA_MAX);
+  const float width = lineSeries->useGlobalStrokeWidth()
+                          ? context.globalLineWidth
+                          : lineSeries->strokeWidth();
+  const float aa = lineSeries->useGlobalAntialias() ? context.globalAntialiasing
+                                                    : lineSeries->antialias();
 
   data->marker.color = lineSeries->markerColor();
   data->marker.visible = lineSeries->markerVisible();
@@ -47,11 +43,11 @@ std::unique_ptr<RenderData> LineSeriesStrategy::build(
   data->stroke.width = width;
   data->stroke.pattern = lineSeries->strokePattern();
   data->stroke.dashStyle = DashStyle{
-      .length = std::max(15.0f, float(width) * 3.0f),
-      .gap = std::max(10.0f, float(width) * 2.0f),
+      .length = std::max(15.0f, width * 3.0f),
+      .gap = std::max(10.0f, width * 2.0f),
   };
   data->stroke.dotStyle = DotStyle{
-      .gap = std::max(10.0f, float(width)),
+      .gap = std::max(10.0f, width),
   };
   data->antialias = aa;
 

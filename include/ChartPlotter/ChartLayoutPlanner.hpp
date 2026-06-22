@@ -58,10 +58,10 @@ enum class CoordinateSystem {
 };
 
 struct ChartMargins {
-  qreal left = 90;
-  qreal top = 90;
-  qreal right = 90;
-  qreal bottom = 90;
+  float left = 90;
+  float top = 90;
+  float right = 90;
+  float bottom = 90;
 };
 
 struct ChartChromeRequest {

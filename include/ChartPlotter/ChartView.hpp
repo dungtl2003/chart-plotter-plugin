@@ -25,6 +25,10 @@ class GeneralConfig {
 
   Q_PROPERTY(float lineWidth READ lineWidth WRITE setLineWidth)
   Q_PROPERTY(float antialiasing READ antialiasing WRITE setAntialiasing)
+  Q_PROPERTY(int xPreferredTickCount READ xPreferredTickCount WRITE
+                 setXPreferredTickCount)
+  Q_PROPERTY(int yPreferredTickCount READ yPreferredTickCount WRITE
+                 setYPreferredTickCount)
 
 public:
   bool operator==(const GeneralConfig &other) const;
@@ -36,9 +40,17 @@ public:
   float antialiasing() const;
   void setAntialiasing(float a);
 
+  int xPreferredTickCount() const;
+  void setXPreferredTickCount(int tickCount);
+
+  int yPreferredTickCount() const;
+  void setYPreferredTickCount(int tickCount);
+
 private:
   float m_lineWidth = 5.0f;
   float m_antialiasing = 1.0f;
+  int m_xPreferredTickCount = 6;
+  int m_yPreferredTickCount = 6;
 };
 
 class ChartView : public QQuickItem {
@@ -98,8 +110,8 @@ public:
 
   QVariantList seriesList() const;
 
-  Q_INVOKABLE void applySettings(qreal globalStrokeWidth,
-                                 qreal globalAntialiasing);
+  Q_INVOKABLE void applySettings(float globalStrokeWidth,
+                                 float globalAntialiasing);
 
 public slots:
   void onDataError(const QString &message);

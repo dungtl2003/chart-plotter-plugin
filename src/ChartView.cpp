@@ -1,11 +1,14 @@
 #include "ChartPlotter/ChartView.hpp"
 
 #include "ChartPlotter/axis/AxisBuilder.hpp"
+#include "ChartPlotter/constants/ChartConstants.hpp"
 #include "ChartPlotter/data/RenderData.hpp"
 #include "ChartPlotter/factory/SeriesComponentFactoryProvider.hpp"
 #include "ChartPlotter/node/ChartRenderNode.hpp"
 #include "ChartPlotter/utils/DataRangeCalculator.hpp"
 #include "ChartPlotter/utils/LoggerManager.hpp"
+
+#include <algorithm>
 
 namespace ChartPlotter {
 
@@ -15,14 +18,32 @@ void GeneralConfig::setLineWidth(float newLineWidth) {
 }
 
 float GeneralConfig::antialiasing() const { return m_antialiasing; }
-void GeneralConfig::setAntialiasing(float a) { m_antialiasing = a; }
+void GeneralConfig::setAntialiasing(float a) {
+  m_antialiasing =
+      std::clamp(a, ChartConstants::LINE_AA_MIN, ChartConstants::LINE_AA_MAX);
+}
+
+int GeneralConfig::xPreferredTickCount() const { return m_xPreferredTickCount; }
+void GeneralConfig::setXPreferredTickCount(int tickCount) {
+  m_xPreferredTickCount = std::clamp(tickCount, ChartConstants::TICK_COUNT_MIN,
+                                     ChartConstants::TICK_COUNT_MAX);
+}
+
+int GeneralConfig::yPreferredTickCount() const { return m_yPreferredTickCount; }
+void GeneralConfig::setYPreferredTickCount(int tickCount) {
+  m_yPreferredTickCount = std::clamp(tickCount, ChartConstants::TICK_COUNT_MIN,
+                                     ChartConstants::TICK_COUNT_MAX);
+}
 
 bool GeneralConfig::operator==(const GeneralConfig &o) const {
-  return m_lineWidth == o.m_lineWidth && m_antialiasing == o.m_antialiasing;
+  return m_lineWidth == o.m_lineWidth && m_antialiasing == o.m_antialiasing &&
+         m_xPreferredTickCount == o.m_xPreferredTickCount &&
+         m_yPreferredTickCount == o.m_yPreferredTickCount;
 }
-bool GeneralConfig::operator!=(const GeneralConfig &other) const {
-  return m_lineWidth != other.lineWidth() ||
-         m_antialiasing != other.m_antialiasing;
+bool GeneralConfig::operator!=(const GeneralConfig &o) const {
+  return m_lineWidth != o.lineWidth() || m_antialiasing != o.m_antialiasing ||
+         m_xPreferredTickCount != o.m_xPreferredTickCount ||
+         m_yPreferredTickCount != o.m_yPreferredTickCount;
 }
 
 ChartView::ChartView(QQuickItem *parent) : QQuickItem(parent) {
@@ -613,7 +634,7 @@ void ChartView::relayout() {
   if (m_titleItem) {
     if (m_plan.hasTitle) {
       m_titleItem->setVisible(true);
-      const qreal h = m_titleItem->implicitHeight() > 0
+      const float h = m_titleItem->implicitHeight() > 0
                           ? m_titleItem->implicitHeight()
                           : m_titleItem->height();
       m_titleItem->setPosition(QPointF(rect.left(), rect.top()));
@@ -771,8 +792,8 @@ QVariantList ChartView::seriesList() const {
   return list;
 }
 
-void ChartView::applySettings(qreal globalStrokeWidth,
-                              qreal globalAntialiasing) {
+void ChartView::applySettings(float globalStrokeWidth,
+                              float globalAntialiasing) {
   m_generalConfig.setLineWidth(static_cast<float>(globalStrokeWidth));
   m_generalConfig.setAntialiasing(static_cast<float>(globalAntialiasing));
   emit generalConfigChanged();
