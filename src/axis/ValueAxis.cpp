@@ -10,27 +10,16 @@ AxisTicks ValueAxis::calculateTicks(const AxisRange &range, int targetTickCount,
                                     bool isDateTime) {
   AxisTicks result;
 
-  if (targetTickCount < 2) {
-    targetTickCount = 2;
+  const auto niceBound =
+      RenderMath::expandToNiceBounds(range.toDataRange(), targetTickCount);
+  if (!niceBound.range.valid) {
+    return result;
   }
 
-  double min = range.min;
-  double max = range.max;
-
-  if (!std::isfinite(min) || !std::isfinite(max) || min == max) {
-    min = -1.0;
-    max = 1.0;
-  }
-
-  const double rawRange = max - min;
-
-  double niceRange = RenderMath::niceNumber(rawRange, false);
-  double step = RenderMath::niceNumber(niceRange / (targetTickCount - 1), true);
-
+  double step = niceBound.step;
+  double tickMin = niceBound.range.min;
+  double tickMax = niceBound.range.max;
   result.step = step;
-
-  double tickMin = std::floor(min / step) * step;
-  double tickMax = std::ceil(max / step) * step;
   // tickMax + step * 0.5 helps to avoid floating-point precision issues.
   // When add double repeately, the final result can be like: 99.99...9999 or
   // 100.000...01, so the final tick can be missed.
@@ -44,24 +33,6 @@ AxisTicks ValueAxis::calculateTicks(const AxisRange &range, int targetTickCount,
     }
     result.ticks.append(tick);
   }
-
-  // double firstTick = std::ceil(min / step) * step;
-  // double firstTick = std::floor(min / step) * step;
-  // const double precisionEpsilon = step * ChartConstants::EPSILON;
-  // for (double value = firstTick; value <= max + precisionEpsilon;
-  //      value += step) {
-  //   AxisTick tick;
-  //   tick.value = value;
-  //
-  //   if (!isDateTime) {
-  //     tick.label = formatTickLabel(value, step);
-  //   } else {
-  //     tick.label =
-  //     QDateTime::fromMSecsSinceEpoch(value).toString("yyyy-MM-dd");
-  //   }
-  //
-  //   result.ticks.append(tick);
-  // }
 
   return result;
 }

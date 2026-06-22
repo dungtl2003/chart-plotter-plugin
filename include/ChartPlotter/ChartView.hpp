@@ -111,7 +111,9 @@ public:
   QVariantList seriesList() const;
 
   Q_INVOKABLE void applySettings(float globalStrokeWidth,
-                                 float globalAntialiasing);
+                                 float globalAntialiasing,
+                                 int xPreferredTickCount,
+                                 int yPreferredTickCount);
 
 public slots:
   void onDataError(const QString &message);

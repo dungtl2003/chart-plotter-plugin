@@ -15,7 +15,8 @@ void ViewportController::setRange(DataRange newRange) {
   m_dataRange = newRange;
 
   if (m_isAutoScaled || !m_visibleDataRange.valid) {
-    m_visibleDataRange = expandToNiceBounds(m_dataRange, 6);
+    m_visibleDataRange =
+        RenderMath::expandToNiceBounds(m_dataRange, m_targetTickCount).range;
     return;
   }
 
@@ -40,7 +41,8 @@ void ViewportController::setRange(DataRange newRange) {
 
 void ViewportController::resetZoom() {
   m_isAutoScaled = true;
-  m_visibleDataRange = expandToNiceBounds(m_dataRange, 6);
+  m_visibleDataRange =
+      RenderMath::expandToNiceBounds(m_dataRange, m_targetTickCount).range;
 }
 
 const DataRange &ViewportController::getVisibleRange() const {
@@ -58,7 +60,8 @@ void ViewportController::zoom(QRectF viewport, QPointF mousePos, int steps) {
   const double factor = std::pow(0.9, steps);
   const double currentRange = m_visibleDataRange.max - m_visibleDataRange.min;
   const double newRange = currentRange * factor;
-  const DataRange maxAllowedBounds = expandToNiceBounds(m_dataRange, 6);
+  const DataRange maxAllowedBounds =
+      RenderMath::expandToNiceBounds(m_dataRange, m_targetTickCount).range;
   const double maxAllowedWidth = maxAllowedBounds.max - maxAllowedBounds.min;
   const bool isTrackingLiveEdge =
       (m_visibleDataRange.max >= m_dataRange.max - ChartConstants::EPSILON);
@@ -115,7 +118,8 @@ void ViewportController::pan(QRectF viewport, double deltaXPixels) {
 
   const double currentRange = m_visibleDataRange.max - m_visibleDataRange.min;
   const double dataDelta = (deltaXPixels / viewport.width()) * currentRange;
-  const DataRange maxAllowedBounds = expandToNiceBounds(m_dataRange, 6);
+  const DataRange maxAllowedBounds =
+      RenderMath::expandToNiceBounds(m_dataRange, m_targetTickCount).range;
 
   double newMin = m_visibleDataRange.min - dataDelta;
   double newMax = m_visibleDataRange.max - dataDelta;
@@ -133,23 +137,8 @@ void ViewportController::pan(QRectF viewport, double deltaXPixels) {
   m_visibleDataRange.max = newMax;
 }
 
-DataRange ViewportController::expandToNiceBounds(const DataRange &rawRange,
-                                                 int targetTickCount) const {
-  if (!rawRange.valid || rawRange.min >= rawRange.max) {
-    return rawRange;
-  }
-
-  const double rawDiff = rawRange.max - rawRange.min;
-
-  double niceRange = RenderMath::niceNumber(rawDiff, false);
-  double step = RenderMath::niceNumber(niceRange / (targetTickCount - 1), true);
-
-  DataRange paddedRange;
-  paddedRange.min = std::floor(rawRange.min / step) * step;
-  paddedRange.max = std::ceil(rawRange.max / step) * step;
-  paddedRange.valid = true;
-
-  return paddedRange;
+void ViewportController::setTargetTickCount(int tickCount) {
+  m_targetTickCount = tickCount;
 }
 
 } // namespace ChartPlotter

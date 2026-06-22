@@ -18,6 +18,7 @@ public:
   const DataRange &getVisibleRange() const;
   void zoom(QRectF viewport, QPointF mousePos, int steps);
   void pan(QRectF viewport, double deltaXPixels);
+  void setTargetTickCount(int tickCount);
 
 private:
   /**
@@ -30,9 +31,7 @@ private:
   DataRange m_dataRange;
   DataRange m_visibleDataRange;
   bool m_isAutoScaled = true;
-
-  DataRange expandToNiceBounds(const DataRange &rawRange,
-                               int targetTickCount) const;
+  int m_targetTickCount = 6;
 };
 
 } // namespace ChartPlotter

@@ -1,5 +1,7 @@
 #pragma once
 
+#include "ChartPlotter/types/DataRange.hpp"
+
 #include <QVector2D>
 
 namespace ChartPlotter {
@@ -7,6 +9,11 @@ namespace ChartPlotter {
 namespace RenderMath {
 
 constexpr float Epsilon = 0.0001f;
+
+struct NiceBoundsResult {
+  DataRange range;
+  double step = 0.0;
+};
 
 /**
  * This will tell you the direction of one relative to the other.
@@ -73,6 +80,9 @@ void appendTriangle(QVector<T> &out, const T &v0, const T &v1, const T &v2);
  * nice number = nice fraction * 10^n
  */
 double niceNumber(double value, bool round);
+
+NiceBoundsResult expandToNiceBounds(const DataRange &rawRange,
+                                    int targetTickCount);
 
 } // namespace RenderMath
 

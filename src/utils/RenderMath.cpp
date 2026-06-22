@@ -79,4 +79,30 @@ double RenderMath::niceNumber(double value, bool round) {
   return niceFraction * std::pow(10.0, exponent);
 }
 
+RenderMath::NiceBoundsResult
+RenderMath::expandToNiceBounds(const DataRange &rawRange, int targetTickCount) {
+  targetTickCount = std::max(targetTickCount, 2);
+
+  double min = rawRange.min;
+  double max = rawRange.max;
+
+  if (!rawRange.valid || !std::isfinite(min) || !std::isfinite(max) ||
+      min >= max) {
+    min = -1.0;
+    max = 1.0;
+  }
+
+  const double rawDiff = max - min;
+
+  double niceRange = niceNumber(rawDiff, false);
+  double step = niceNumber(niceRange / (targetTickCount - 1), true);
+
+  DataRange paddedRange;
+  paddedRange.min = std::floor(rawRange.min / step) * step;
+  paddedRange.max = std::ceil(rawRange.max / step) * step;
+  paddedRange.valid = true;
+
+  return NiceBoundsResult{.range = paddedRange, .step = step};
+}
+
 } // namespace ChartPlotter

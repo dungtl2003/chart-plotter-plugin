@@ -323,8 +323,13 @@ bool ChartView::rebuildRenderPackage() {
     return false;
   }
 
-  if (m_viewportController && m_resolvedSeries.absoluteXRange.valid) {
-    m_viewportController->setRange(m_resolvedSeries.absoluteXRange);
+  if (m_viewportController) {
+    m_viewportController->setTargetTickCount(
+        m_generalConfig.xPreferredTickCount());
+
+    if (m_resolvedSeries.absoluteXRange.valid) {
+      m_viewportController->setRange(m_resolvedSeries.absoluteXRange);
+    }
   }
 
   if (m_plan.coordinateSystem == CoordinateSystem::Cartesian) {
@@ -478,8 +483,9 @@ bool ChartView::rebuildXYSeriesRenderPackage(
           : AxisBuilder::buildValueAxis(globalX,
                                         resolvedResult.sharedXColumnType ==
                                             ChartEnums::DataType::Date,
-                                        6);
-  const AxisModel yModel = AxisBuilder::buildValueAxis(globalY);
+                                        m_generalConfig.xPreferredTickCount());
+  const AxisModel yModel = AxisBuilder::buildValueAxis(
+      globalY, false, m_generalConfig.yPreferredTickCount());
 
   /**
    * X axis range will follow the visible range we want, while Y axis range
@@ -792,10 +798,14 @@ QVariantList ChartView::seriesList() const {
   return list;
 }
 
-void ChartView::applySettings(float globalStrokeWidth,
-                              float globalAntialiasing) {
-  m_generalConfig.setLineWidth(static_cast<float>(globalStrokeWidth));
-  m_generalConfig.setAntialiasing(static_cast<float>(globalAntialiasing));
+void ChartView::applySettings(float globalStrokeWidth, float globalAntialiasing,
+                              int xPreferredTickCount,
+                              int yPreferredTickCount) {
+  m_generalConfig.setLineWidth(globalStrokeWidth);
+  m_generalConfig.setAntialiasing(globalAntialiasing);
+  m_generalConfig.setXPreferredTickCount(xPreferredTickCount);
+  m_generalConfig.setYPreferredTickCount(yPreferredTickCount);
+
   emit generalConfigChanged();
   if (m_plan.valid && rebuildRenderPackage()) {
     update();

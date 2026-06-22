@@ -14,6 +14,10 @@ struct AxisRange {
   static AxisRange fromDataRange(const DataRange &range) {
     return AxisRange{.min = range.min, .max = range.max};
   }
+
+  DataRange toDataRange() const {
+    return DataRange{.min = min, .max = max, .valid = true};
+  }
 };
 
 struct AxisTick {

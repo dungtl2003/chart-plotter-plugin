@@ -33,6 +33,8 @@ Button {
             return;
         gWidth.value = chart.generalConfig.lineWidth;
         gAa.value = chart.generalConfig.antialiasing;
+        gXTicks.value = chart.generalConfig.xPreferredTickCount;
+        gYTicks.value = chart.generalConfig.yPreferredTickCount;
 
         lines.clear();
         const list = chart.seriesList;
@@ -66,7 +68,7 @@ Button {
             s.markerVisible = d.showMarker;
             s.strokePattern = d.pattern;
         }
-        chart.applySettings(gWidth.value, gAa.value);   // global + one rebuild
+        chart.applySettings(gWidth.value, gAa.value, gXTicks.value, gYTicks.value);   // global + one rebuild
     }
 
     component SliderRow: RowLayout {
@@ -80,7 +82,7 @@ Button {
         spacing: 10
         Label {
             text: sr.label
-            Layout.preferredWidth: 92
+            Layout.preferredWidth: 95
         }
         Slider {
             id: sld
@@ -115,7 +117,7 @@ Button {
             spacing: 14
 
             GroupBox {
-                title: "Global — applies to every line"
+                title: "Global — applies to every series"
                 Layout.fillWidth: true
                 ColumnLayout {
                     anchors.fill: parent
@@ -132,6 +134,20 @@ Button {
                         label: "Antialiasing"
                         from: ChartConstants.LINE_AA_MIN
                         to: ChartConstants.LINE_AA_MAX
+                        stepSize: 1
+                    }
+                    SliderRow {
+                        id: gXTicks
+                        label: "Desired X-Ticks"
+                        from: ChartConstants.TICK_COUNT_MIN
+                        to: ChartConstants.TICK_COUNT_MAX
+                        stepSize: 1
+                    }
+                    SliderRow {
+                        id: gYTicks
+                        label: "Desired Y-Ticks"
+                        from: ChartConstants.TICK_COUNT_MIN
+                        to: ChartConstants.TICK_COUNT_MAX
                         stepSize: 1
                     }
                 }
