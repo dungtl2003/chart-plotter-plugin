@@ -65,31 +65,49 @@ void ViewportController::zoom(QRectF viewport, QPointF mousePos, int steps) {
   const double maxAllowedWidth = maxAllowedBounds.max - maxAllowedBounds.min;
   const bool isTrackingLiveEdge =
       (m_visibleDataRange.max >= m_dataRange.max - ChartConstants::EPSILON);
+  const double absoluteRange = m_dataRange.max - m_dataRange.min;
 
   double t;
   double anchor;
-  if (isTrackingLiveEdge) {
-    // We are at the live edge. Force the anchor to the right side.
-    t = 1.0;
-    anchor = m_visibleDataRange.max;
-  } else {
-    // We are in the past. Anchor to the mouse cursor.
-    t = std::clamp(mousePos.x() / viewport.width(), 0.0, 1.0);
-    // nicer UI
-    if (t <= 0.3) {
-      t = 0;
-    }
-    if (t >= 0.7) {
-      t = 1;
-    }
-
-    anchor = m_visibleDataRange.min + t * currentRange;
+  // if (isTrackingLiveEdge) {
+  //   // We are at the live edge. Force the anchor to the right side.
+  //   t = 1.0;
+  //   anchor = m_visibleDataRange.max;
+  // } else {
+  //   // We are in the past. Anchor to the mouse cursor.
+  //   t = std::clamp(mousePos.x() / viewport.width(), 0.0, 1.0);
+  //   // nicer UI
+  //   if (t <= 0.2) {
+  //     t = 0;
+  //   }
+  //   if (t >= 0.8) {
+  //     t = 1;
+  //   }
+  //
+  //   anchor = m_visibleDataRange.min + t * currentRange;
+  // }
+  t = std::clamp(mousePos.x() / viewport.width(), 0.0, 1.0);
+  // nicer UI
+  if (t <= 0.2) {
+    t = 0;
   }
+  if (t >= 0.8) {
+    t = 1;
+  }
+
+  anchor = m_visibleDataRange.min + t * currentRange;
 
   double newMin = anchor - t * newRange;
   double newMax = anchor + (1.0 - t) * newRange;
 
-  if (newMax - newMin > maxAllowedWidth) {
+  /**
+   * 2 cases:
+   * - User zoomed too far, cap the limit.
+   * - Currently lower than data range, but after zoom bigger than data range,
+   * this mean it should be auto scale again
+   */
+  if (newMax - newMin > maxAllowedWidth ||
+      ((newMax - newMin) > absoluteRange && currentRange <= absoluteRange)) {
     // User zoomed out too far. Cap it to the padded limits and restore
     // auto-scale.
     newMin = maxAllowedBounds.min;

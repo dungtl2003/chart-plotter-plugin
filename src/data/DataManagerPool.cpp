@@ -2,7 +2,14 @@
 
 namespace ChartPlotter {
 
-DataManagerPool::DataManagerPool(QObject *parent) : QObject(parent) {}
+DataManagerPool::DataManagerPool(QObject *parent) : QObject(parent) {
+  m_fpsTimer = new QTimer(this);
+  m_fpsTimer->setInterval(1000 / m_fps);
+  connect(m_fpsTimer, &QTimer::timeout, this,
+          &DataManagerPool::onFpsTimerTicked);
+  m_fpsTimer->start();
+}
+
 DataManagerPool::~DataManagerPool() { shutdownDataManagers(); }
 
 void DataManagerPool::onDataError(const QString &message) {
@@ -12,6 +19,11 @@ void DataManagerPool::onDataError(const QString &message) {
 void DataManagerPool::onSnapshotReady(int sourceId,
                                       const DataSnapshot &snapshot) {
   emit snapshotReady(sourceId, snapshot);
+}
+
+void snapshotsReady(
+    std::vector<std::pair<int, const DataSnapshot &>> snapshots) {
+  emit snapshotsReady(snapshots);
 }
 
 const QHash<DataSource *, int> &DataManagerPool::sourceIds() const {
@@ -28,6 +40,7 @@ DataManagerPool::createDataManager(const QPointer<DataSource> source) {
 
   QPointer<DataManager> manager = new DataManager();
   manager->setDataReadConfig(std::move(source->exportConfig()));
+  manager->setSourceId(id);
   manager->moveToThread(thread);
 
   connect(thread, &QThread::started, manager, &DataManager::start);
@@ -37,12 +50,12 @@ DataManagerPool::createDataManager(const QPointer<DataSource> source) {
   });
   connect(manager, &DataManager::errorOccurred, this,
           &DataManagerPool::onDataError, Qt::QueuedConnection);
-  connect(
-      manager, &DataManager::snapshotReady, this,
-      [this, id](const DataSnapshot &snapshot) {
-        onSnapshotReady(id, snapshot);
-      },
-      Qt::QueuedConnection);
+  // connect(
+  //     manager, &DataManager::snapshotReady, this,
+  //     [this, id](const DataSnapshot &snapshot) {
+  //       onSnapshotReady(id, snapshot);
+  //     },
+  //     Qt::QueuedConnection);
   connect(manager, &DataManager::finished, thread, &QThread::quit,
           Qt::QueuedConnection);
 
@@ -87,6 +100,25 @@ void DataManagerPool::shutdownDataManager(QPointer<DataManager> manager,
   }
 
   thread->deleteLater();
+}
+
+void DataManagerPool::onFpsTimerTicked() {
+  std::vector<std::pair<int, DataSnapshot>> snapshots;
+
+  for (auto &runtime : m_dataManagers) {
+    if (!runtime.manager) {
+      continue;
+    }
+
+    QPointer<DataManager> manager = runtime.manager;
+    auto snapshot = manager->getLatestSnapshot();
+    int sourceId = manager->getSourceId();
+    snapshots.emplace_back(sourceId, snapshot);
+  }
+
+  if (snapshots.size() > 0) {
+    emit snapshotsReady(std::move(snapshots));
+  }
 }
 
 } // namespace ChartPlotter

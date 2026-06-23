@@ -118,6 +118,8 @@ public:
 public slots:
   void onDataError(const QString &message);
   void onSnapshotReady(int sourceId, const DataSnapshot &snapshot);
+  void
+  onSnapshotsReady(const std::vector<std::pair<int, DataSnapshot>> &snapshots);
 
 protected:
   void geometryChange(const QRectF &newGeom, const QRectF &oldGeom) override;
@@ -159,6 +161,11 @@ private:
   QPointer<QQuickItem> m_legendItem;
   QRectF m_plotOuterRect;
 
+  float m_fps = 60.0;
+  bool m_updatePending = false;
+  QTimer *m_updateTimer = nullptr;
+  QElapsedTimer m_lastUpdateTimer;
+
   bool m_isPanning = false;
   QPointF m_panLastMousePos;
   DataRange m_lockedYRange;
@@ -176,6 +183,9 @@ private:
   static QObject *contentAt(QQmlListProperty<QObject> *property,
                             qsizetype index);
   static void clearContent(QQmlListProperty<QObject> *property);
+
+  void scheduleUpdate();
+  void performScheduledUpdate();
 
   void replan();
   void relayout();

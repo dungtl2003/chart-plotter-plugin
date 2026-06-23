@@ -5,6 +5,7 @@
 #include "ChartPlotter/data/RenderData.hpp"
 #include "ChartPlotter/series/AbstractSeries.hpp"
 #include "ChartPlotter/series/ResolvedSeriesData.hpp"
+#include "downsample/DataDownsampler.hpp"
 
 namespace ChartPlotter {
 
@@ -15,6 +16,8 @@ struct SeriesBuildContext {
   float globalLineWidth = 2.0;
   float globalAntialiasing = 1.0;
   DataRange viewportXRange;
+  std::unique_ptr<DataDownsampler> dataDownsampler;
+  qsizetype preferredTotalPoints = 200;
 };
 
 class ISeriesStrategy {

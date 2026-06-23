@@ -17,6 +17,9 @@ public:
   explicit DataManager(QObject *parent = nullptr);
 
   void setDataReadConfig(const DataReadConfig &config);
+  void setSourceId(int id);
+  int getSourceId() const;
+  const DataSnapshot &getLatestSnapshot();
 
 public slots:
   void start();
@@ -37,11 +40,15 @@ private slots:
   void onBufferUpdated();
 
 private:
+  int m_sourceId = -1;
   DataReadConfig m_dataReadConfig;
   std::shared_ptr<DataBuffer> m_buffer;
   QPointer<DataBufferUpdater> m_bufferUpdater;
   QPointer<AbstractDataReader> m_reader;
   QPointer<AbstractDataParser> m_parser;
+
+  std::mutex m_snapshotMutex;
+  DataSnapshot m_currentSnapshot;
 };
 
 } // namespace ChartPlotter

@@ -10,7 +10,7 @@ namespace ChartPlotter {
 
 struct DataReaderConfig {
   QUrl url;
-  qint64 chunkSize = ChartEnums::DataUnit::Kb;
+  qint64 chunkSize = 1 * ChartEnums::DataUnit::Kb;
 };
 
 class AbstractDataReader : public QObject {

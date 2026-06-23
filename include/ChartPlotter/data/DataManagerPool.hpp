@@ -35,11 +35,18 @@ public slots:
 signals:
   void errorOccurred(QString message);
   void snapshotReady(int sourceId, const DataSnapshot &snapshot);
+  void snapshotsReady(std::vector<std::pair<int, DataSnapshot>> snapshots);
+
+private slots:
+  void onFpsTimerTicked();
 
 private:
   QHash<DataSource *, int> m_sourceIds;
   QVector<DataManagerRuntime> m_dataManagers;
   int m_nextSourceId = 0;
+
+  float m_fps = 5;
+  QTimer *m_fpsTimer = nullptr;
 };
 
 } // namespace ChartPlotter

@@ -21,6 +21,9 @@ void DataManager::setDataReadConfig(const DataReadConfig &config) {
   m_dataReadConfig = config;
 }
 
+void DataManager::setSourceId(int id) { m_sourceId = id; }
+int DataManager::getSourceId() const { return m_sourceId; }
+
 void DataManager::start() {
   const QUrl url = m_dataReadConfig.url;
   const ChartEnums::DataFormat format = m_dataReadConfig.format;
@@ -105,7 +108,17 @@ void DataManager::onBufferUpdated() {
     return;
   }
 
-  emit snapshotReady(m_buffer->snapshot());
+  QMutexLocker locker(&m_snapshotMutex);
+  m_currentSnapshot = std::move(m_buffer->snapshot());
+
+  // CP_DEBUG("buffer updated");
+  // m_bufferUpdated = true;
+  // emit snapshotReady(m_buffer->snapshot());
+}
+
+const DataSnapshot &DataManager::getLatestSnapshot() {
+  QMutexLocker locker(&m_snapshotMutex);
+  return m_currentSnapshot;
 }
 
 } // namespace ChartPlotter

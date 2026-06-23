@@ -155,6 +155,9 @@ set(CHARTPLOTTER_HEADERS
     include/ChartPlotter/utils/Variant.hpp
     include/ChartPlotter/utils/DataRangeCalculator.hpp
 
+    include/ChartPlotter/downsample/DataDownsampler.hpp
+    include/ChartPlotter/downsample/LargestTriangleThreeBuckets.hpp
+
     include/ChartPlotter/types/ChartEnums.hpp
     include/ChartPlotter/types/DataRange.hpp
 
@@ -216,6 +219,8 @@ set(CHARTPLOTTER_SOURCES
     src/utils/RenderMath.cpp
     src/utils/Variant.cpp
     src/utils/DataRangeCalculator.cpp
+
+    src/downsample/LargestTriangleThreeBuckets.cpp
 )
 
 set(CHARTPLOTTER_SHADERS
