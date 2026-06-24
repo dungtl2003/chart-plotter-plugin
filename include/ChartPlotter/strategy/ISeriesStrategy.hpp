@@ -9,6 +9,27 @@
 
 namespace ChartPlotter {
 
+struct PointCacheKey {
+  int sourceId;
+  qint64 xColIndex;
+  qint64 yColIndex;
+
+  bool operator==(const PointCacheKey &other) const {
+    return sourceId == other.sourceId && xColIndex == other.xColIndex &&
+           yColIndex == other.yColIndex;
+  }
+};
+
+inline size_t qHash(const PointCacheKey &key, size_t seed = 0) {
+  return qHashMulti(seed, key.sourceId, key.xColIndex, key.yColIndex);
+}
+
+struct PointCacheValue {
+  quint64 epochId = 0;
+  quint64 processedRowCount = 0;
+  QVector<QPointF> points;
+};
+
 struct SeriesBuildContext {
   // Non-null only when the corresponding axis is categorical (String).
   const CategoryAxis *xCategories = nullptr;
@@ -18,6 +39,8 @@ struct SeriesBuildContext {
   DataRange viewportXRange;
   std::unique_ptr<DataDownsampler> dataDownsampler;
   qsizetype preferredTotalPoints = 200;
+
+  QHash<PointCacheKey, PointCacheValue> *globalPointCache;
 };
 
 class ISeriesStrategy {
@@ -30,9 +53,10 @@ public:
   ISeriesStrategy &operator=(ISeriesStrategy &&) = delete;
   virtual ~ISeriesStrategy() = default;
 
-  virtual std::unique_ptr<RenderData>
-  build(const AbstractSeries &series, const ResolvedSeriesData &resolved,
-        const DataSnapshot &snapshot, const SeriesBuildContext &context) = 0;
+  virtual std::unique_ptr<RenderData> build(const AbstractSeries &series,
+                                            const ResolvedSeriesData &resolved,
+                                            const DataSnapshot &snapshot,
+                                            SeriesBuildContext &context) = 0;
 };
 
 } // namespace ChartPlotter

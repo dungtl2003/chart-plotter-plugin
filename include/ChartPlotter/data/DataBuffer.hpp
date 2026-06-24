@@ -31,6 +31,7 @@ struct DataSnapshot {
   QVector<ColumnSnapshot> columns;
   QHash<QString, qint64> columnIndex;
 
+  quint64 epochId = 0;
   qint64 rowCount = 0;
   qint64 columnCount = 0;
   qint64 version = 0;
@@ -63,6 +64,8 @@ struct ColumnInitField {
 class DataBuffer {
 
 public:
+  DataBuffer();
+
   void clear();
 
   void initColumns(const QVector<ColumnInitField> &columnInitFields);
@@ -91,6 +94,8 @@ public:
 private:
   QVector<MutableDataColumn> m_columns;
   QHash<QString, qint64> m_columnIndex;
+
+  quint64 m_epochId = 0;
   qint64 m_rowCount = 0;
   bool m_isValid = true;
   qint64 m_version = 0;

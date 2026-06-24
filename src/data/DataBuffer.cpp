@@ -7,18 +7,16 @@ DataChunk::DataChunk() { values.reserve(CHUNK_SIZE); }
 QString DataSnapshot::toString() const {
   QString result;
   result.reserve(columns.size() * 33);
-
-  for (qint64 i = 0; i < columns.size(); ++i) {
+  for (size_t i = 0; i < columns.size(); ++i) {
     result.append(QString("    ColumnSnapshot(%1, chunks=%2)")
                       .arg(columns[i].name)
                       .arg(columns[i].chunks.size()));
-    if (i < columns.size() - 1) {
+    if (i < columns.size() - 1)
       result.append(",\n");
-    }
   }
-
-  return QString(
-             "DataSnapshot({version = %1, rowCount = %2, columns = [\n%3\n]})")
+  return QString("DataSnapshot({epochId = %1, version = %2, rowCount = %3, "
+                 "columns = [\n%4\n]})")
+      .arg(epochId)
       .arg(version)
       .arg(rowCount)
       .arg(result);
@@ -74,11 +72,18 @@ QString MutableDataColumn::toString() const {
       .arg(size());
 }
 
+DataBuffer::DataBuffer() {
+  m_epochId = QRandomGenerator::global()->generate64();
+}
+
 void DataBuffer::clear() {
   std::lock_guard<std::mutex> locker(m_snapshotMutex);
   m_columns.clear();
   m_columnIndex.clear();
   m_rowCount = 0;
+
+  m_epochId = QRandomGenerator::global()->generate64();
+  ++m_version;
 }
 
 void DataBuffer::initColumns(const QVector<ColumnInitField> &columnInitFields) {
@@ -95,11 +100,17 @@ void DataBuffer::initColumns(const QVector<ColumnInitField> &columnInitFields) {
     m_columns.push_back(std::move(col));
     m_columnIndex.insert(columnInitFields.at(i).name, i);
   }
+
+  m_epochId = QRandomGenerator::global()->generate64();
+  ++m_version;
 }
 
 void DataBuffer::appendRow(const QVector<double> &rowValues) {
-  if (m_columns.isEmpty())
+  std::lock_guard<std::mutex> locker(m_snapshotMutex);
+
+  if (m_columns.isEmpty()) {
     return;
+  }
   for (qint64 column = 0; column < m_columns.size(); ++column) {
     if (column < rowValues.size()) {
       m_columns[column].appendValue(rowValues.at(column));
@@ -107,15 +118,30 @@ void DataBuffer::appendRow(const QVector<double> &rowValues) {
       m_columns[column].appendValue(std::numeric_limits<double>::quiet_NaN());
     }
   }
+
   ++m_rowCount;
+  ++m_version;
 }
 
 void DataBuffer::appendRows(const QVector<QVector<double>> &rows) {
-  if (m_columns.isEmpty() || rows.isEmpty())
+  std::lock_guard<std::mutex> locker(m_snapshotMutex);
+
+  if (m_columns.isEmpty() || rows.isEmpty()) {
     return;
-  for (const auto &row : rows) {
-    appendRow(row);
   }
+
+  for (const auto &row : rows) {
+    for (int column = 0; column < m_columns.size(); ++column) {
+      if (column < row.size()) {
+        m_columns[column].appendValue(row.at(column));
+      } else {
+        m_columns[column].appendValue(std::numeric_limits<double>::quiet_NaN());
+      }
+    }
+    ++m_rowCount;
+  }
+
+  ++m_version;
 }
 
 qint64 DataBuffer::rowCount() const { return m_rowCount; }
@@ -211,6 +237,8 @@ void DataBuffer::rebuildColumnIndex() {
 }
 
 void DataBuffer::normalizeColumnSizes() {
+  std::lock_guard<std::mutex> locker(m_snapshotMutex);
+
   qint64 maxSize = 0;
   for (const MutableDataColumn &column : m_columns) {
     maxSize = std::max(maxSize, column.size());
@@ -220,13 +248,18 @@ void DataBuffer::normalizeColumnSizes() {
       column.appendValue(std::numeric_limits<double>::quiet_NaN());
     }
   }
-  m_rowCount = maxSize;
+
+  if (m_rowCount != maxSize) {
+    m_rowCount = maxSize;
+    ++m_version;
+  }
 }
 
 DataSnapshot DataBuffer::snapshot() {
   std::lock_guard<std::mutex> locker(m_snapshotMutex);
 
   DataSnapshot snap;
+  snap.epochId = m_epochId;
   snap.rowCount = m_rowCount;
   snap.columnCount = m_columns.size();
   snap.columnIndex = m_columnIndex;
@@ -238,9 +271,7 @@ DataSnapshot DataBuffer::snapshot() {
     ColumnSnapshot colSnap;
     colSnap.name = col.name;
     colSnap.type = col.type;
-
     colSnap.chunks.assign(col.chunks.begin(), col.chunks.end());
-
     colSnap.categories = col.idToString;
     snap.columns.append(std::move(colSnap));
   }

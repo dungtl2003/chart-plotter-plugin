@@ -12,11 +12,11 @@ public:
   std::unique_ptr<RenderData> build(const AbstractSeries &series,
                                     const ResolvedSeriesData &resolved,
                                     const DataSnapshot &snapshot,
-                                    const SeriesBuildContext &context) override;
+                                    SeriesBuildContext &context) override;
 
 private:
   std::expected<void, QString> convertRowsToPoints(
-      QVector<QPointF>::iterator destinationIt, const AbstractSeries &series,
+      QVector<QPointF> &destination, const AbstractSeries &series,
       const ResolvedSeriesData &resolved, const DataSnapshot &snapshot,
       const SeriesBuildContext &context, qsizetype fromRow) const;
   std::expected<void, QString>
@@ -25,6 +25,9 @@ private:
   std::pair<QVector<QPointF>::const_iterator, QVector<QPointF>::const_iterator>
   calculateBound(const QVector<QPointF> points,
                  const SeriesBuildContext &context) const;
+  std::expected<void, QString>
+  validateTyAndColIndex(const ResolvedSeriesData &resolved,
+                        const DataSnapshot &snapshot) const;
 };
 
 } // namespace ChartPlotter

@@ -17,90 +17,110 @@ namespace ChartPlotter {
 
 std::unique_ptr<RenderData> LineSeriesStrategy::build(
     const AbstractSeries &series, const ResolvedSeriesData &resolved,
-    const DataSnapshot &snapshot, const SeriesBuildContext &context) {
+    const DataSnapshot &snapshot, SeriesBuildContext &context) {
   auto data = std::make_unique<LineRenderData>();
 
-  const int xIndex = resolved.xColumnIndex;
-  const int yIndex = resolved.yColumnIndex;
-  const ChartEnums::DataType xType = resolved.xColumnType;
-  const ChartEnums::DataType yType = resolved.yColumnType;
-
-  if (!resolved.valid) {
-    CP_WARN("LineSeriesStrategy::build: resolved series is invalid: {}",
-            resolved.errorMessage.toStdString());
-    return data;
-  }
-
-  if (xIndex < 0 || xIndex >= snapshot.columnCount) {
-    CP_WARN("LineSeriesStrategy::build: invalid x column index {}", xIndex);
-    return data;
-  }
-
-  if (yIndex < 0 || yIndex >= snapshot.columnCount) {
-    CP_WARN("LineSeriesStrategy::build: invalid y column index {}", yIndex);
-    return data;
-  }
-
-  if (yType != ChartEnums::DataType::Number) {
-    CP_WARN("LineSeriesStrategy::build: y column must be Number");
-    return data;
-  }
-
-  auto result = loadSeriesConfig(data.get(), series, context);
+  auto result = validateTyAndColIndex(resolved, snapshot);
   if (!result) {
     CP_WARN(result.error().toStdString());
     return data;
   }
 
-  CP_DEBUG("converting rows to points...");
-  data->points.resize(snapshot.rowCount);
-  result = convertRowsToPoints(data->points.begin(), series, resolved, snapshot,
-                               context, 0);
+  result = loadSeriesConfig(data.get(), series, context);
   if (!result) {
     CP_WARN(result.error().toStdString());
     return data;
   }
-  std::sort(data->points.begin(), data->points.end(),
+
+  PointCacheKey key{resolved.sourceId, resolved.xColumnIndex,
+                    resolved.yColumnIndex};
+  PointCacheValue &cache = (*context.globalPointCache)[key];
+
+  if (cache.epochId != snapshot.epochId) {
+    cache.epochId = snapshot.epochId;
+    cache.processedRowCount = 0;
+    cache.points.clear();
+  }
+
+  if (cache.processedRowCount < snapshot.rowCount) {
+    // CP_DEBUG("Processing new delta rows...");
+    QVector<QPointF> newPoints;
+    newPoints.reserve(snapshot.rowCount - cache.processedRowCount);
+
+    auto convertResult =
+        convertRowsToPoints(newPoints, series, resolved, snapshot, context,
+                            cache.processedRowCount);
+    if (!convertResult) {
+      CP_WARN(convertResult.error().toStdString());
+      return data;
+    }
+
+    if (data->dataIsSortedByX) {
+      // Sort only the new delta points
+      std::sort(
+          newPoints.begin(), newPoints.end(),
+          [](const QPointF &a, const QPointF &b) { return a.x() < b.x(); });
+
+      // Merge sort the newly sorted delta with the already sorted cache
+      if (cache.points.isEmpty()) {
+        cache.points = std::move(newPoints);
+      } else {
+        QVector<QPointF> merged;
+        merged.reserve(cache.points.size() + newPoints.size());
+        std::merge(
+            cache.points.begin(), cache.points.end(), newPoints.begin(),
+            newPoints.end(), std::back_inserter(merged),
             [](const QPointF &a, const QPointF &b) { return a.x() < b.x(); });
 
-  CP_DEBUG("calculating bound...");
-  auto bound = calculateBound(data->points, context);
-  data->points.assign(bound.first, bound.second);
+        cache.points = std::move(merged);
+      }
+    } else {
+      // No sorting required, simply append the new points
+      cache.points.append(newPoints);
+    }
 
-  if (context.dataDownsampler && context.preferredTotalPoints > 0 &&
-      data->points.size() > context.preferredTotalPoints) {
-    CP_DEBUG("down sampling data...");
-    QVector<QPointF> points;
-    points.reserve(data->points.size());
-    points.append(data->points);
-
-    data->points.resize(context.preferredTotalPoints);
-    context.dataDownsampler->downsample(points.begin(), points.size(),
-                                        data->points.begin(),
-                                        context.preferredTotalPoints);
+    cache.processedRowCount = snapshot.rowCount;
   }
 
-  CP_DEBUG("calculating data range...");
+  // O(1) Copy utilizing Qt's implicit sharing
+  data->points = cache.points;
+
+  if (!data->points.isEmpty()) {
+    // CP_DEBUG("calculating bound...");
+    auto bound = calculateBound(data->points, context);
+    data->points.assign(bound.first, bound.second);
+  }
+
+  // if (context.dataDownsampler && context.preferredTotalPoints > 0 &&
+  //     data->points.size() > context.preferredTotalPoints) {
+  //   // CP_DEBUG("down sampling data...");
+  //   QVector<QPointF> originalPoints = std::move(data->points);
+  //   data->points.resize(context.preferredTotalPoints);
+  //
+  //   context.dataDownsampler->downsample(
+  //       originalPoints.begin(), originalPoints.size(), data->points.begin(),
+  //       context.preferredTotalPoints);
+  // }
+
+  // CP_DEBUG("calculating data range...");
   for (const auto &p : data->points) {
     DataRange::includeValue(data->xRange, p.x());
     DataRange::includeValue(data->yRange, p.y());
   }
 
-  CP_DEBUG("finished!!!!!!");
+  // CP_DEBUG("finished!!!!!!");
   data->valid = true;
-  // CP_DEBUG(data->toString().toStdString());
   return data;
 }
 
 std::expected<void, QString> LineSeriesStrategy::convertRowsToPoints(
-    QVector<QPointF>::iterator destinationIt, const AbstractSeries &series,
+    QVector<QPointF> &destination, const AbstractSeries &series,
     const ResolvedSeriesData &resolved, const DataSnapshot &snapshot,
     const SeriesBuildContext &context, qsizetype fromRow) const {
   const int xIndex = resolved.xColumnIndex;
   const int yIndex = resolved.yColumnIndex;
   const ChartEnums::DataType xType = resolved.xColumnType;
 
-  // We no longer need yType checks because Y is strictly enforced as Number
   if (xType != ChartEnums::DataType::Number &&
       xType != ChartEnums::DataType::Date &&
       xType != ChartEnums::DataType::String) {
@@ -126,8 +146,7 @@ std::expected<void, QString> LineSeriesStrategy::convertRowsToPoints(
       x = resolved.localToGlobalXMap[localId];
     }
 
-    *destinationIt = QPointF(x, y);
-    ++destinationIt;
+    destination.append(QPointF(x, y));
   }
 
   return {};
@@ -191,6 +210,40 @@ LineSeriesStrategy::calculateBound(const QVector<QPointF> points,
   }
 
   return {leftIt, rightIt};
+}
+
+std::expected<void, QString>
+LineSeriesStrategy::validateTyAndColIndex(const ResolvedSeriesData &resolved,
+                                          const DataSnapshot &snapshot) const {
+  const int xIndex = resolved.xColumnIndex;
+  const int yIndex = resolved.yColumnIndex;
+  const ChartEnums::DataType xType = resolved.xColumnType;
+  const ChartEnums::DataType yType = resolved.yColumnType;
+
+  if (!resolved.valid) {
+    return std::unexpected(
+        QString("LineSeriesStrategy::build: resolved series is invalid: %1")
+            .arg(resolved.errorMessage));
+  }
+
+  if (xIndex < 0 || xIndex >= snapshot.columnCount) {
+    return std::unexpected(
+        QString("LineSeriesStrategy::build: invalid x column index %1")
+            .arg(xIndex));
+  }
+
+  if (yIndex < 0 || yIndex >= snapshot.columnCount) {
+    return std::unexpected(
+        QString("LineSeriesStrategy::build: invalid y column index %1")
+            .arg(yIndex));
+  }
+
+  if (yType != ChartEnums::DataType::Number) {
+    return std::unexpected(
+        "LineSeriesStrategy::build: y column must be Number");
+  }
+
+  return {};
 }
 
 } // namespace ChartPlotter

@@ -271,7 +271,8 @@ void ChartView::onSnapshotsReady(
   // m_logger->debug(snapshot.toString().toStdString());
   for (const auto &p : snapshots) {
     if (!m_snapshots.contains(p.first) ||
-        m_snapshots[p.first].version < p.second.version) {
+        (m_snapshots[p.first].epochId == p.second.epochId &&
+         m_snapshots[p.first].version < p.second.version)) {
       hasNewChanges = true;
       m_snapshots[p.first] = p.second;
     }
@@ -392,6 +393,7 @@ bool ChartView::rebuildRenderPackage() {
 
 bool ChartView::rebuildXYSeriesRenderPackage(
     const SeriesResolveResult &resolvedResult) {
+  CP_DEBUG("Start rebuilding XY Series Render package...");
   ChartRenderPackage package;
 
   /**
@@ -412,6 +414,7 @@ bool ChartView::rebuildXYSeriesRenderPackage(
   buildContext.globalAntialiasing = m_generalConfig.antialiasing();
   buildContext.dataDownsampler =
       std::make_unique<LargestTriangleThreeBuckets>();
+  buildContext.globalPointCache = &m_globalPointCache;
 
   if (m_viewportController && m_viewportController->getVisibleRange().valid) {
     buildContext.viewportXRange = m_viewportController->getVisibleRange();
@@ -464,8 +467,10 @@ bool ChartView::rebuildXYSeriesRenderPackage(
 
     const DataSnapshot &snapshot = snapshotIt.value();
 
+    CP_DEBUG("Strategy {} building data", seriesIndex);
     std::unique_ptr<RenderData> data = m_strategies[seriesIndex]->build(
         *series, resolved, snapshot, buildContext);
+    CP_DEBUG("Strategy {} done building data", seriesIndex);
 
     if (!data) {
       m_logger->warn(
@@ -584,6 +589,8 @@ bool ChartView::rebuildXYSeriesRenderPackage(
   };
 
   m_pendingRenderPackage = std::move(package);
+
+  CP_DEBUG("End rebuilding XY Series Render package...");
   return true;
 }
 

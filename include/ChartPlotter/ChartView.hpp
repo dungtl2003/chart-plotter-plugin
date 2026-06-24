@@ -170,6 +170,8 @@ private:
   QPointF m_panLastMousePos;
   DataRange m_lockedYRange;
 
+  QHash<PointCacheKey, PointCacheValue> m_globalPointCache;
+
   void dropLogger();
   std::string appendUniqueId(std::string s) const;
   void resetStrategies();

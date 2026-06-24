@@ -34,6 +34,7 @@ struct LineRenderData : public XYSeriesRenderData {
   Marker marker;
 
   float antialias = 1.0f;
+  bool dataIsSortedByX = false;
 };
 
 } // namespace ChartPlotter
