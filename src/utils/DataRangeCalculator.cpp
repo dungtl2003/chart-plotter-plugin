@@ -1,51 +1,25 @@
 #include "ChartPlotter/utils/DataRangeCalculator.hpp"
-#include "ChartPlotter/utils/Variant.hpp"
 
 namespace ChartPlotter {
 
-DataRange DataRangeCalculator::calculateColumnRange(
-    const DataSnapshot &snapshot, int columnIndex,
-    ChartEnums::DataType dataType, const CategoryAxis *categories) {
+DataRange
+DataRangeCalculator::calculateColumnRange(const DataSnapshot &snapshot,
+                                          qint64 columnIndex) {
+
   DataRange range;
 
   if (columnIndex < 0 || columnIndex >= snapshot.columnCount) {
     return range;
   }
 
-  for (int row = 0; row < snapshot.rowCount; ++row) {
-    const QVariant value = snapshot.valueAt(columnIndex, row);
-    if (!value.isValid() || value.isNull()) {
-      continue;
-    }
+  for (qint64 row = 0; row < snapshot.rowCount; ++row) {
+    double numValue = snapshot.valueAt(columnIndex, row);
 
-    double numValue = 0.0;
-    bool converted = false;
-
-    switch (dataType) {
-    case ChartEnums::DataType::Number:
-      converted = Utils::Variant::variantToDouble(value, numValue);
-      break;
-    case ChartEnums::DataType::Date:
-      converted = Utils::Variant::variantToDateNumber(value, numValue);
-      break;
-    case ChartEnums::DataType::String: {
-      if (categories) {
-        const int idx = categories->indexOf(value.toString());
-        if (idx >= 0) {
-          numValue = static_cast<double>(idx);
-          converted = true;
-        }
-      }
-      break;
-    }
-    default:
-      continue;
-    }
-
-    if (converted && std::isfinite(numValue)) {
+    if (!std::isnan(numValue) && std::isfinite(numValue)) {
       DataRange::includeValue(range, numValue);
     }
   }
+
   return range;
 }
 

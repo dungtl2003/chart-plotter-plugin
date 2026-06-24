@@ -14,7 +14,7 @@ namespace ChartPlotter {
 
 struct DataChunk {
   static constexpr int CHUNK_SIZE = 10000;
-  QVector<QVariant> values;
+  QVector<double> values;
 
   DataChunk();
 };
@@ -24,20 +24,22 @@ struct ColumnSnapshot {
   ChartEnums::DataType type;
 
   std::vector<std::shared_ptr<const DataChunk>> chunks;
+  QVector<QString> categories;
 };
 
 struct DataSnapshot {
   QVector<ColumnSnapshot> columns;
-  QHash<QString, quint64> columnIndex;
+  QHash<QString, qint64> columnIndex;
 
-  quint64 rowCount = 0;
-  quint64 columnCount = 0;
-  quint64 version = 0;
+  qint64 rowCount = 0;
+  qint64 columnCount = 0;
+  qint64 version = 0;
 
   QString toString() const;
-  ChartEnums::DataType columnType(int idx) const;
-  QString columnName(int idx) const;
-  QVariant valueAt(quint64 col, quint64 row) const;
+  ChartEnums::DataType columnType(qint64 idx) const;
+  QString columnName(qint64 idx) const;
+  double valueAt(qint64 col, qint64 row) const;
+  QString categoryName(qint64 col, double val) const;
 };
 
 struct MutableDataColumn {
@@ -45,8 +47,11 @@ struct MutableDataColumn {
   ChartEnums::DataType type;
   std::vector<std::shared_ptr<DataChunk>> chunks;
 
-  void appendValue(const QVariant &value);
-  quint64 size() const;
+  QHash<QString, double> stringToId;
+  QVector<QString> idToString;
+
+  void appendValue(double value);
+  qint64 size() const;
   QString toString() const;
 };
 
@@ -61,18 +66,19 @@ public:
   void clear();
 
   void initColumns(const QVector<ColumnInitField> &columnInitFields);
-  void appendRow(const DataRow &row);
-  void appendRows(const QVector<DataRow> &rows);
 
-  quint64 rowCount() const;
-  quint64 columnCount() const;
+  void appendRow(const QVector<double> &rowValues);
+  void appendRows(const QVector<QVector<double>> &rows);
+
+  qint64 rowCount() const;
+  qint64 columnCount() const;
 
   bool hasColumn(const QString &name) const;
   std::optional<std::reference_wrapper<MutableDataColumn>>
   column(const QString &name);
   std::optional<std::reference_wrapper<MutableDataColumn>> column(qint64 idx);
 
-  QVariant valueAt(const QString &columnName, int row);
+  double valueAt(const QString &columnName, qint64 row);
 
   QVector<QString> columnNames() const;
   QString toString() const;
@@ -84,10 +90,10 @@ public:
 
 private:
   QVector<MutableDataColumn> m_columns;
-  QHash<QString, quint64> m_columnIndex;
-  quint64 m_rowCount = 0;
+  QHash<QString, qint64> m_columnIndex;
+  qint64 m_rowCount = 0;
   bool m_isValid = true;
-  quint64 m_version = 0;
+  qint64 m_version = 0;
 
   std::mutex m_snapshotMutex;
 

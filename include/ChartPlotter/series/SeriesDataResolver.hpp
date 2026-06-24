@@ -27,7 +27,7 @@ public:
                               const QVector<int> &pieSeriesIndexes,
                               const QVector<QPointer<AbstractSeries>> &series,
                               const QHash<DataSource *, int> &sourceIds,
-                              const QHash<int, DataSnapshot> &snapshots) const;
+                              const QHash<int, DataSnapshot> &snapshots);
 
 private:
   ResolvedSeriesData
@@ -45,15 +45,14 @@ private:
 
   bool checkSharedXYBinding(SeriesResolveResult &result) const;
 
-  int getColumnIndex(const DataSnapshot &snapshot,
-                     const QString &colName) const;
+  qint64 getColumnIndex(const DataSnapshot &snapshot,
+                        const QString &colName) const;
 
   ResolvedColumn resolveColumn(const DataSnapshot &snapshot,
                                const ColumnBinding &binding,
                                const QString &role, int seriesIndex) const;
-  void
-  collectSharedXCategories(SeriesResolveResult &result,
-                           const QHash<int, DataSnapshot> &snapshots) const;
+  void collectSharedXCategories(SeriesResolveResult &result,
+                                const QHash<int, DataSnapshot> &snapshots);
 
   void calculateAbsoluteBounds(SeriesResolveResult &result,
                                const QHash<int, DataSnapshot> &snapshots) const;

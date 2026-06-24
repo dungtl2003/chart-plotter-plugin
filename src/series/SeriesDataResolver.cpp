@@ -1,4 +1,5 @@
 #include "ChartPlotter/series/SeriesDataResolver.hpp"
+#include "ChartPlotter/types/DataRange.hpp"
 #include "ChartPlotter/utils/DataRangeCalculator.hpp"
 
 namespace ChartPlotter {
@@ -8,7 +9,7 @@ SeriesDataResolver::resolve(const QVector<int> &xySeriesIndexes,
                             const QVector<int> &pieSeriesIndexes,
                             const QVector<QPointer<AbstractSeries>> &series,
                             const QHash<DataSource *, int> &sourceIds,
-                            const QHash<int, DataSnapshot> &snapshots) const {
+                            const QHash<int, DataSnapshot> &snapshots) {
   SeriesResolveResult result;
 
   for (int seriesIndex : xySeriesIndexes) {
@@ -357,8 +358,8 @@ bool SeriesDataResolver::isSupportedPieLabelType(
          type == ChartEnums::DataType::Number;
 }
 
-int SeriesDataResolver::getColumnIndex(const DataSnapshot &snapshot,
-                                       const QString &colName) const {
+qint64 SeriesDataResolver::getColumnIndex(const DataSnapshot &snapshot,
+                                          const QString &colName) const {
   return snapshot.columnIndex.contains(colName)
              ? snapshot.columnIndex.value(colName)
              : -1;
@@ -377,7 +378,7 @@ ResolvedColumn SeriesDataResolver::resolveColumn(const DataSnapshot &snapshot,
     return result;
   }
 
-  int index = -1;
+  qint64 index = -1;
 
   if (binding.kind == ColumnBindingKind::Index) {
     index = binding.index;
@@ -411,9 +412,8 @@ ResolvedColumn SeriesDataResolver::resolveColumn(const DataSnapshot &snapshot,
 }
 
 void SeriesDataResolver::collectSharedXCategories(
-    SeriesResolveResult &result,
-    const QHash<int, DataSnapshot> &snapshots) const {
-  for (const ResolvedSeriesData &resolved : result.xySeries) {
+    SeriesResolveResult &result, const QHash<int, DataSnapshot> &snapshots) {
+  for (ResolvedSeriesData &resolved : result.xySeries) {
     if (!resolved.valid) {
       continue;
     }
@@ -422,16 +422,17 @@ void SeriesDataResolver::collectSharedXCategories(
       continue;
     }
     const DataSnapshot &snapshot = it.value();
-    const int col = resolved.xColumnIndex;
+    const qint64 col = resolved.xColumnIndex;
     if (col < 0 || col >= snapshot.columnCount) {
       continue;
     }
-    for (int row = 0; row < snapshot.rowCount; ++row) {
-      const QVariant v = snapshot.valueAt(col, row);
-      if (!v.isValid() || v.isNull()) {
-        continue;
-      }
-      result.sharedXCategories.intern(v.toString());
+
+    const auto &localCategories = snapshot.columns.at(col).categories;
+    resolved.localToGlobalXMap.resize(localCategories.size());
+
+    for (qsizetype i = 0; i < localCategories.size(); ++i) {
+      int globalId = result.sharedXCategories.intern(localCategories[i]);
+      resolved.localToGlobalXMap[i] = static_cast<double>(globalId);
     }
   }
 }
@@ -455,14 +456,20 @@ void SeriesDataResolver::calculateAbsoluteBounds(
 
     const DataSnapshot &snapshot = it.value();
 
-    // Calculate X bounds. Pass the shared categories for String types.
-    resolved.absoluteXRange = DataRangeCalculator::calculateColumnRange(
-        snapshot, resolved.xColumnIndex, resolved.xColumnType,
-        &result.sharedXCategories);
+    // Calculate X bounds
+    if (resolved.xColumnType == ChartEnums::DataType::String) {
+      // O(1) calculation: the bounds are always [0, Number of Categories - 1]
+      double maxId =
+          static_cast<double>(std::max(0, result.sharedXCategories.size() - 1));
+      resolved.absoluteXRange =
+          DataRange{.min = 0.0, .max = maxId, .valid = true};
+    } else {
+      resolved.absoluteXRange = DataRangeCalculator::calculateColumnRange(
+          snapshot, resolved.xColumnIndex);
+    }
 
-    // Calculate Y bounds. Y is always Number, so categories are nullptr.
     resolved.absoluteYRange = DataRangeCalculator::calculateColumnRange(
-        snapshot, resolved.yColumnIndex, resolved.yColumnType, nullptr);
+        snapshot, resolved.yColumnIndex);
 
     result.absoluteXRange = DataRangeCalculator::unionRange(
         result.absoluteXRange, resolved.absoluteXRange);

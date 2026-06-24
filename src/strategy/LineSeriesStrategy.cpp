@@ -3,13 +3,11 @@
 #include "ChartPlotter/data/DataBuffer.hpp"
 #include "ChartPlotter/series/LineSeries.hpp"
 #include "ChartPlotter/utils/LoggerManager.hpp"
-#include "ChartPlotter/utils/Variant.hpp"
 
 #include <QDate>
 #include <QDateTime>
 #include <QHash>
 #include <QPointF>
-#include <QVariant>
 #include <QVector>
 
 #include <algorithm>
@@ -101,53 +99,31 @@ std::expected<void, QString> LineSeriesStrategy::convertRowsToPoints(
   const int xIndex = resolved.xColumnIndex;
   const int yIndex = resolved.yColumnIndex;
   const ChartEnums::DataType xType = resolved.xColumnType;
-  const ChartEnums::DataType yType = resolved.yColumnType;
+
+  // We no longer need yType checks because Y is strictly enforced as Number
+  if (xType != ChartEnums::DataType::Number &&
+      xType != ChartEnums::DataType::Date &&
+      xType != ChartEnums::DataType::String) {
+    return std::unexpected(
+        "LineSeriesStrategy::build: unsupported x column type");
+  }
 
   for (qsizetype row = fromRow; row < snapshot.rowCount; ++row) {
-    const QVariant xValue = snapshot.valueAt(xIndex, row);
-    const QVariant yValue = snapshot.valueAt(yIndex, row);
+    double x = snapshot.valueAt(xIndex, row);
+    double y = snapshot.valueAt(yIndex, row);
 
-    if (!xValue.isValid() || xValue.isNull() || !yValue.isValid() ||
-        yValue.isNull()) {
+    if (std::isnan(x) || std::isnan(y)) {
       continue;
     }
 
-    double x = 0.0;
-    double y = 0.0;
+    if (xType == ChartEnums::DataType::String) {
+      int localId = static_cast<int>(x);
 
-    switch (xType) {
-    case ChartEnums::DataType::Number:
-      if (!Utils::Variant::variantToDouble(xValue, x)) {
+      if (localId < 0 || localId >= resolved.localToGlobalXMap.size()) {
         continue;
       }
-      break;
 
-    case ChartEnums::DataType::Date:
-      if (!Utils::Variant::variantToDateNumber(xValue, x)) {
-        continue;
-      }
-      break;
-
-    case ChartEnums::DataType::String: {
-      if (!context.xCategories) {
-        return std::unexpected(
-            "LineSeriesStrategy::build: categorical x but no category axis");
-      }
-      const int idx = context.xCategories->indexOf(xValue.toString());
-      if (idx < 0) {
-        continue; // value wasn't in the shared axis (shouldn't happen)
-      }
-      x = static_cast<double>(idx);
-      break;
-    }
-
-    default:
-      return std::unexpected(
-          "LineSeriesStrategy::build: unsupported x column type");
-    }
-
-    if (!Utils::Variant::variantToDouble(yValue, y)) {
-      continue;
+      x = resolved.localToGlobalXMap[localId];
     }
 
     *destinationIt = QPointF(x, y);

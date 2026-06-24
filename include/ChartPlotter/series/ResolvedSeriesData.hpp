@@ -5,6 +5,7 @@
 #include "ChartPlotter/types/DataRange.hpp"
 
 #include <QString>
+#include <QVector>
 
 namespace ChartPlotter {
 
@@ -23,14 +24,18 @@ struct ResolvedSeriesData {
   QString xColumnName;
   QString yColumnName;
 
-  int xColumnIndex = -1;
-  int yColumnIndex = -1;
+  qint64 xColumnIndex = -1;
+  qint64 yColumnIndex = -1;
 
   ChartEnums::DataType xColumnType = ChartEnums::DataType::Unknown;
   ChartEnums::DataType yColumnType = ChartEnums::DataType::Unknown;
 
   DataRange absoluteXRange;
   DataRange absoluteYRange;
+
+  // Maps the local categorical 'double' ID in the DataChunk
+  // to the global CategoryAxis 'double' ID.
+  QVector<double> localToGlobalXMap;
 
   // Pie series
   QString labelColumnName;

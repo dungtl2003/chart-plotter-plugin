@@ -108,6 +108,9 @@ DataBufferUpdater::parseRow(const DataRow &row) {
     return {};
   }
 
+  QVector<double> convertedRow;
+  convertedRow.reserve(m_columnSize);
+
   for (qint64 i = 0; i < m_columnSize; ++i) {
     auto value = row.values.at(i);
     auto result = m_buffer->column(i);
@@ -116,12 +119,16 @@ DataBufferUpdater::parseRow(const DataRow &row) {
     }
 
     auto &column = result->get();
-    if (!resolveType(column, value)) {
+    double doubleVal = std::numeric_limits<double>::quiet_NaN();
+
+    if (!convertValue(column, value, doubleVal)) {
       return {};
     }
+
+    convertedRow.push_back(doubleVal);
   }
 
-  m_buffer->appendRow(row);
+  m_buffer->appendRow(convertedRow);
 
   return {};
 }
@@ -280,40 +287,53 @@ bool DataBufferUpdater::rowIsValid(const DataRow &row) {
   return true;
 }
 
-bool DataBufferUpdater::resolveType(MutableDataColumn &col,
-                                    const QVariant &val) const {
-  // right now, if we cannot infer type, the column type should be string by
-  // default
-  assert(col.type != ChartEnums::DataType::Unknown || m_canInferTypes);
-
-  // Any type can be casted to string so we don't need to do anything
-  if (col.type == ChartEnums::DataType::String) {
-    return true;
-  }
-
+bool DataBufferUpdater::convertValue(MutableDataColumn &col,
+                                     const QVariant &val, double &outValue) {
   QString valStr = val.toString();
-  ChartEnums::DataType valTy = ChartEnums::DataType::Unknown;
 
-  bool canBeNumber = Utils::Variant::isDouble(valStr);
-  bool canBeDate = Utils::Variant::isDate(valStr);
-
-  // for simplicity, a value can only be one type
-  if (canBeNumber) {
-    valTy = ChartEnums::DataType::Number;
-  } else if (canBeDate) {
-    valTy = ChartEnums::DataType::Date;
-  } else {
-    valTy = ChartEnums::DataType::String;
+  // Initial Type Inference (Only happens if type is Unknown)
+  if (col.type == ChartEnums::DataType::Unknown && m_canInferTypes) {
+    if (Utils::Variant::isDouble(valStr)) {
+      col.type = ChartEnums::DataType::Number;
+    } else if (Utils::Variant::isDate(valStr)) {
+      col.type = ChartEnums::DataType::Date;
+    } else {
+      col.type = ChartEnums::DataType::String;
+    }
   }
 
-  if (col.type != valTy && !m_canInferTypes) {
-    return false;
+  switch (col.type) {
+  case ChartEnums::DataType::Number: {
+    bool ok;
+    outValue = valStr.toDouble(&ok);
+    if (!ok) {
+      // Bad numeric data. Instead of downgrading the whole column,
+      // we just leave outValue as NaN. The chart will simply skip rendering
+      // this point.
+      outValue = std::numeric_limits<double>::quiet_NaN();
+    }
+    break;
   }
-
-  if (col.type == ChartEnums::DataType::Unknown) {
-    col.type = valTy;
-  } else if (col.type != valTy) {
-    col.type = ChartEnums::DataType::String;
+  case ChartEnums::DataType::Date: {
+    if (!Utils::Variant::variantToDateNumber(val, outValue)) {
+      outValue = std::numeric_limits<double>::quiet_NaN();
+    }
+    break;
+  }
+  case ChartEnums::DataType::String:
+  default: {
+    if (valStr.isEmpty()) {
+      outValue = std::numeric_limits<double>::quiet_NaN();
+      break;
+    }
+    if (!col.stringToId.contains(valStr)) {
+      double newId = static_cast<double>(col.idToString.size());
+      col.stringToId.insert(valStr, newId);
+      col.idToString.push_back(valStr);
+    }
+    outValue = col.stringToId.value(valStr);
+    break;
+  }
   }
 
   return true;

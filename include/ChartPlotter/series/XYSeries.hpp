@@ -9,7 +9,7 @@ enum class ColumnBindingKind { Name, Index, Invalid };
 struct ColumnBinding {
   ColumnBindingKind kind = ColumnBindingKind::Invalid;
   QString name;
-  int index = -1;
+  qint64 index = -1;
 
   static ColumnBinding byName(const QString &name) {
     ColumnBinding binding;
