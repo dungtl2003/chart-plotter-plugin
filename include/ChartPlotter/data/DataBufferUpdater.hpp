@@ -45,7 +45,7 @@ private:
   std::expected<void, std::string> parseRow(const DataRow &row);
   std::expected<void, std::string> parseHeaderRow(const DataRow &headerRow);
   bool rowIsValid(const DataRow &row);
-  bool resolveType(DataColumn &col, const QVariant &val) const;
+  bool resolveType(MutableDataColumn &col, const QVariant &val) const;
   void fail(QString &&message);
 };
 

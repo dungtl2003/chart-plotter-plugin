@@ -3,6 +3,7 @@
 #include "ChartPlotter/axis/AxisBuilder.hpp"
 #include "ChartPlotter/constants/ChartConstants.hpp"
 #include "ChartPlotter/data/RenderData.hpp"
+#include "ChartPlotter/downsample/LargestTriangleThreeBuckets.hpp"
 #include "ChartPlotter/factory/SeriesComponentFactoryProvider.hpp"
 #include "ChartPlotter/node/ChartRenderNode.hpp"
 #include "ChartPlotter/utils/DataRangeCalculator.hpp"
@@ -50,6 +51,12 @@ ChartView::ChartView(QQuickItem *parent) : QQuickItem(parent) {
   setFlag(ItemHasContents, true);
   setAcceptedMouseButtons(Qt::LeftButton);
 
+  m_updateTimer = new QTimer(this);
+  m_updateTimer->setSingleShot(true);
+  connect(m_updateTimer, &QTimer::timeout, this,
+          &ChartView::performScheduledUpdate);
+  m_lastUpdateTimer.start();
+
   m_dataManagerPool = new DataManagerPool(this);
   m_legendModel = new LegendModel(this);
   m_viewportController = new ViewportController(this);
@@ -57,17 +64,23 @@ ChartView::ChartView(QQuickItem *parent) : QQuickItem(parent) {
   m_logger = LoggerManager::createInstanceLogger(m_name.toStdString());
   connect(m_dataManagerPool, &DataManagerPool::errorOccurred, this,
           &ChartView::onDataError, Qt::QueuedConnection);
+  // connect(
+  //     m_dataManagerPool, &DataManagerPool::snapshotReady, this,
+  //     [this](int id, const DataSnapshot &snapshot) {
+  //       onSnapshotReady(id, snapshot);
+  //     },
+  //     Qt::QueuedConnection);
   connect(
-      m_dataManagerPool, &DataManagerPool::snapshotReady, this,
-      [this](int id, const DataSnapshot &snapshot) {
-        onSnapshotReady(id, snapshot);
+      m_dataManagerPool, &DataManagerPool::snapshotsReady, this,
+      [this](const std::vector<std::pair<int, DataSnapshot>> &snapshots) {
+        onSnapshotsReady(snapshots);
       },
       Qt::QueuedConnection);
 
   connect(m_legendModel, &LegendModel::visibilityChanged, this,
           [this](int, bool) {
             if (m_plan.valid && rebuildRenderPackage()) {
-              update();
+              scheduleUpdate();
             }
           });
 }
@@ -104,7 +117,7 @@ void ChartView::componentComplete() {
 
   // Force the initial empty render package build
   if (m_plan.valid && rebuildRenderPackage()) {
-    update();
+    scheduleUpdate();
   }
 }
 
@@ -161,7 +174,7 @@ void ChartView::wheelEvent(QWheelEvent *event) {
 
   m_viewportController->zoom(m_plotContext.plotArea, mousePos, numSteps.y());
   if (m_plan.valid && rebuildRenderPackage()) {
-    update();
+    scheduleUpdate();
   }
 
   event->accept();
@@ -209,7 +222,7 @@ void ChartView::mouseMoveEvent(QMouseEvent *event) {
   m_viewportController->pan(m_plotContext.plotArea, deltaX);
   m_panLastMousePos = mousePos;
   if (m_plan.valid && rebuildRenderPackage()) {
-    update();
+    scheduleUpdate();
   }
 
   event->accept();
@@ -224,7 +237,7 @@ void ChartView::mouseReleaseEvent(QMouseEvent *event) {
   m_isPanning = false;
 
   if (m_plan.valid && rebuildRenderPackage()) {
-    update();
+    scheduleUpdate();
   }
 
   ungrabMouse(); // Release the mouse capture
@@ -235,10 +248,38 @@ void ChartView::onDataError(const QString &message) {
   m_logger->warn(message.toStdString());
 }
 
-void ChartView::onSnapshotReady(int sourceId, const DataSnapshot &snapshot) {
-  // m_logger->debug(snapshot.toString().toStdString());
+// void ChartView::onSnapshotReady(int sourceId, const DataSnapshot &snapshot) {
+//   // m_logger->debug(snapshot.toString().toStdString());
+//
+//   CP_DEBUG("Received onSnapshotReady from DataManagerPool");
+//   m_snapshots[sourceId] = snapshot;
+//
+//   if (!m_plan.valid) {
+//     return;
+//   }
+//
+//   if (!rebuildRenderPackage()) {
+//     return;
+//   }
+//
+//   scheduleUpdate();
+// }
 
-  m_snapshots[sourceId] = snapshot;
+void ChartView::onSnapshotsReady(
+    const std::vector<std::pair<int, DataSnapshot>> &snapshots) {
+  bool hasNewChanges = false;
+  // m_logger->debug(snapshot.toString().toStdString());
+  for (const auto &p : snapshots) {
+    if (!m_snapshots.contains(p.first) ||
+        m_snapshots[p.first].version < p.second.version) {
+      hasNewChanges = true;
+      m_snapshots[p.first] = p.second;
+    }
+  }
+
+  if (!hasNewChanges) {
+    return;
+  }
 
   if (!m_plan.valid) {
     return;
@@ -248,7 +289,7 @@ void ChartView::onSnapshotReady(int sourceId, const DataSnapshot &snapshot) {
     return;
   }
 
-  update();
+  scheduleUpdate();
 }
 
 QSGNode *ChartView::updatePaintNode(QSGNode *oldNode, UpdatePaintNodeData *) {
@@ -369,6 +410,8 @@ bool ChartView::rebuildXYSeriesRenderPackage(
       xIsCategory ? &resolvedResult.sharedXCategories : nullptr;
   buildContext.globalLineWidth = m_generalConfig.lineWidth();
   buildContext.globalAntialiasing = m_generalConfig.antialiasing();
+  buildContext.dataDownsampler =
+      std::make_unique<LargestTriangleThreeBuckets>();
 
   if (m_viewportController && m_viewportController->getVisibleRange().valid) {
     buildContext.viewportXRange = m_viewportController->getVisibleRange();
@@ -412,9 +455,9 @@ bool ChartView::rebuildXYSeriesRenderPackage(
 
     auto snapshotIt = m_snapshots.constFind(resolved.sourceId);
     if (snapshotIt == m_snapshots.constEnd()) {
-      m_logger->warn(
-          "ChartView::rebuildXYSeriesRenderPackage: missing snapshot for "
-          "sourceId {}",
+      m_logger->info(
+          "ChartView::rebuildXYSeriesRenderPackage: no snapshot found for "
+          "sourceId {}, skipping",
           resolved.sourceId);
       continue;
     }
@@ -726,7 +769,33 @@ void ChartView::relayout() {
   }
 
   m_plotOuterRect = rect;
-  update();
+  scheduleUpdate();
+}
+
+void ChartView::scheduleUpdate() {
+  if (m_updatePending) {
+    return;
+  }
+
+  m_updatePending = true;
+
+  qint64 interval = 1000 / m_fps;
+  qint64 elapsed = m_lastUpdateTimer.elapsed();
+
+  if (elapsed >= interval) {
+    performScheduledUpdate();
+  } else {
+    m_updateTimer->start(interval - elapsed);
+  }
+}
+
+void ChartView::performScheduledUpdate() {
+  m_updatePending = false;
+  m_lastUpdateTimer.restart();
+
+  if (m_plan.valid && rebuildRenderPackage()) {
+    update();
+  }
 }
 
 void ChartView::replan() {
@@ -841,7 +910,7 @@ void ChartView::applySettings(float globalStrokeWidth, float globalAntialiasing,
   if (m_plan.valid && rebuildRenderPackage()) {
     // user can change line color and make legend changes
     rebuildLegendModel();
-    update();
+    scheduleUpdate();
   }
 }
 

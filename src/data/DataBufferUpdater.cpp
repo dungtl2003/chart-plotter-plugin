@@ -62,6 +62,10 @@ void DataBufferUpdater::parseRows(const QVector<DataRow> &rows) {
     return;
   }
 
+  if (rows.size() < 1) {
+    return;
+  }
+
   for (auto &row : rows) {
     // CP_DEBUG(row.toString());
     auto result = parseRow(row);
@@ -276,7 +280,7 @@ bool DataBufferUpdater::rowIsValid(const DataRow &row) {
   return true;
 }
 
-bool DataBufferUpdater::resolveType(DataColumn &col,
+bool DataBufferUpdater::resolveType(MutableDataColumn &col,
                                     const QVariant &val) const {
   // right now, if we cannot infer type, the column type should be string by
   // default

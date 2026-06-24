@@ -126,7 +126,6 @@ set(CHARTPLOTTER_HEADERS
     include/ChartPlotter/data/AxisRenderData.hpp
     include/ChartPlotter/data/DataSource.hpp
     include/ChartPlotter/data/Column.hpp
-    include/ChartPlotter/data/DataColumn.hpp
     include/ChartPlotter/data/DataRow.hpp
     include/ChartPlotter/data/DataBuffer.hpp
     include/ChartPlotter/data/DataBufferUpdater.hpp
@@ -191,7 +190,6 @@ set(CHARTPLOTTER_SOURCES
 
     src/data/DataSource.cpp
     src/data/Column.cpp
-    src/data/DataColumn.cpp
     src/data/DataRow.cpp
     src/data/DataBuffer.cpp
     src/data/DataBufferUpdater.cpp
