@@ -1,10 +1,14 @@
 #include "ChartPlotter/downsample/LargestTriangleThreeBuckets.hpp"
 
+#include <QFutureSynchronizer>
+#include <QThread>
+#include <QtConcurrent>
+
 namespace ChartPlotter {
 
 void LargestTriangleThreeBuckets::downsample(
-    QVector<QPointF>::iterator source, qsizetype sourceSize,
-    QVector<QPointF>::iterator destination, qsizetype destinationSize) {
+    QVector<QPointF>::const_iterator source, qsizetype sourceSize,
+    QVector<QPointF>::iterator destination, qsizetype destinationSize) const {
   if (destinationSize == 0 || sourceSize == 0) {
     return;
   }
@@ -20,73 +24,102 @@ void LargestTriangleThreeBuckets::downsample(
   }
 
   // Don't count first and last point
+  qsizetype totalInnerBuckets = destinationSize - 2;
   double bucketSize = static_cast<double>(sourceSize - 2) /
                       static_cast<double>(destinationSize - 2);
 
-  // Always add the first point
-  *destination = *source;
-  ++destination;
+  // Always add the first point and last point
+  destination[0] = source[0];
+  destination[destinationSize - 1] = source[sourceSize - 1];
 
-  qsizetype aIndex = 0; // Initially a is the first point in the triangle
-
-  for (qsizetype i = 0; i < destinationSize - 2; ++i) {
-    // Calculate point average for next bucket
-    qreal avgX = 0;
-    qreal avgY = 0;
-    qsizetype avgRangeStart = static_cast<qsizetype>((i + 1) * bucketSize) + 1;
-    qsizetype avgRangeEnd = static_cast<qsizetype>((i + 2) * bucketSize) + 1;
-    if (avgRangeEnd > sourceSize) {
-      avgRangeEnd = sourceSize;
-    }
-
-    qsizetype avgRangeLength = avgRangeEnd - avgRangeStart;
-
-    for (; avgRangeStart < avgRangeEnd; ++avgRangeStart) {
-      avgX += source[avgRangeStart].x();
-      avgY += source[avgRangeStart].y();
-    }
-    avgX /= avgRangeLength;
-    avgY /= avgRangeLength;
-
-    qreal pointCX = avgX;
-    qreal pointCY = avgY;
-
-    // Get the range for this bucket
-    qsizetype rangeFrom = static_cast<qsizetype>(i * bucketSize) + 1;
-    qsizetype rangeTo = static_cast<qsizetype>((i + 1) * bucketSize) + 1;
-    qreal pointAX = source[aIndex].x();
-    qreal pointAY = source[aIndex].y();
-
-    qreal maxArea = -1;
-    qsizetype nextAIndex = 0;
-
-    for (; rangeFrom < rangeTo; ++rangeFrom) {
-      qreal pointBX = source[rangeFrom].x();
-      qreal pointBY = source[rangeFrom].y();
-
-      /**
-       * Calculate triangle area over three buckets.
-       *
-       * Formular:
-       *
-       * Area = 1/2 * |(xa - xc)(yb - ya) - (xa - xb)(yc - ya)|
-       */
-      qreal area = std::abs(((pointAX - pointCX) * (pointBY - pointAY)) -
-                            ((pointAX - pointBX) * (pointCY - pointAY)));
-      // we only care about which is bigger, so no need to divide with 2
-      if (area > maxArea) {
-        maxArea = area;
-        nextAIndex = rangeFrom; // Next a is this b
-      }
-    }
-
-    *destination = source[nextAIndex];
-    ++destination;
-    aIndex = nextAIndex; // This a is the next a (chosen b)
+  int threadCount = QThread::idealThreadCount();
+  if (threadCount < 1) {
+    threadCount = 1;
   }
 
-  *destination = source[sourceSize - 1]; // Always add last
-  ++destination;
+  qsizetype bucketsPerThread = totalInnerBuckets / threadCount;
+  QFutureSynchronizer<void> synchronizer;
+
+  for (int t = 0; t < threadCount; ++t) {
+    qsizetype startBucket = t * bucketsPerThread;
+    qsizetype endBucket = (t == threadCount - 1)
+                              ? totalInnerBuckets
+                              : startBucket + bucketsPerThread;
+
+    if (startBucket >= endBucket) {
+      continue;
+    }
+
+    synchronizer.addFuture(QtConcurrent::run([=]() {
+      // Approximate Point A for the start of the chunk
+      qsizetype aIndex = static_cast<qsizetype>(startBucket * bucketSize);
+      if (aIndex < 0) {
+        aIndex = 0;
+      }
+
+      for (qsizetype i = startBucket; i < endBucket; ++i) {
+        // Calculate point average for next bucket
+        qreal avgX = 0;
+        qreal avgY = 0;
+        qsizetype avgRangeStart =
+            static_cast<qsizetype>((i + 1) * bucketSize) + 1;
+        qsizetype avgRangeEnd =
+            static_cast<qsizetype>((i + 2) * bucketSize) + 1;
+        if (avgRangeEnd > sourceSize) {
+          avgRangeEnd = sourceSize;
+        }
+
+        qsizetype avgRangeLength = avgRangeEnd - avgRangeStart;
+
+        for (; avgRangeStart < avgRangeEnd; ++avgRangeStart) {
+          avgX += source[avgRangeStart].x();
+          avgY += source[avgRangeStart].y();
+        }
+        avgX /= avgRangeLength;
+        avgY /= avgRangeLength;
+
+        qreal pointCX = avgX;
+        qreal pointCY = avgY;
+
+        // Get the range for this bucket
+        qsizetype rangeFrom = static_cast<qsizetype>(i * bucketSize) + 1;
+        qsizetype rangeTo = static_cast<qsizetype>((i + 1) * bucketSize) + 1;
+        qreal pointAX = source[aIndex].x();
+        qreal pointAY = source[aIndex].y();
+
+        qreal constX = pointAX - pointCX;
+        qreal constY = pointCY - pointAY;
+
+        qreal maxArea = -1;
+        qsizetype nextAIndex = 0;
+
+        for (; rangeFrom < rangeTo; ++rangeFrom) {
+          /**
+           * Calculate triangle area over three buckets.
+           *
+           * Formular:
+           *
+           * Area = 1/2 * |(xa - xc)(yb - ya) - (xa - xb)(yc - ya)|
+           */
+          qreal area = std::abs((constX * (source[rangeFrom].y() - pointAY)) -
+                                ((pointAX - source[rangeFrom].x()) *
+                                 constY)); // source[rangeFrom].x() = pointBX,
+                                           // source[rangeFrom].y() = pointBY,
+                                           // we use this directly to reduce ops
+          // we only care about which is bigger, so no need to divide with 2
+          if (area > maxArea) {
+            maxArea = area;
+            nextAIndex = rangeFrom; // Next a is this b
+          }
+        }
+
+        destination[i + 1] = source[nextAIndex];
+        aIndex = nextAIndex;
+      }
+    }));
+  }
+
+  synchronizer.waitForFinished();
 }
 
 } // namespace ChartPlotter

@@ -5,6 +5,7 @@
 #include "ChartPlotter/series/PieSeries.hpp"
 #include "ChartPlotter/series/ResolvedSeriesData.hpp"
 #include "ChartPlotter/series/XYSeries.hpp"
+#include "ChartPlotter/strategy/ISeriesStrategy.hpp"
 
 #include <QHash>
 #include <QPointer>
@@ -23,11 +24,13 @@ struct ResolvedColumn {
 
 class SeriesDataResolver {
 public:
-  SeriesResolveResult resolve(const QVector<int> &xySeriesIndexes,
-                              const QVector<int> &pieSeriesIndexes,
-                              const QVector<QPointer<AbstractSeries>> &series,
-                              const QHash<DataSource *, int> &sourceIds,
-                              const QHash<int, DataSnapshot> &snapshots);
+  SeriesResolveResult
+  resolve(const QVector<int> &xySeriesIndexes,
+          const QVector<int> &pieSeriesIndexes,
+          const QVector<QPointer<AbstractSeries>> &series,
+          const QHash<DataSource *, int> &sourceIds,
+          const QHash<int, DataSnapshot> &snapshots,
+          QHash<PointCacheKey, PointCacheValue> *globalPointCache);
 
 private:
   ResolvedSeriesData
@@ -54,8 +57,9 @@ private:
   void collectSharedXCategories(SeriesResolveResult &result,
                                 const QHash<int, DataSnapshot> &snapshots);
 
-  void calculateAbsoluteBounds(SeriesResolveResult &result,
-                               const QHash<int, DataSnapshot> &snapshots) const;
+  void calculateAbsoluteBounds(
+      SeriesResolveResult &result, const QHash<int, DataSnapshot> &snapshots,
+      QHash<PointCacheKey, PointCacheValue> *globalPointCache) const;
 };
 
 } // namespace ChartPlotter

@@ -23,6 +23,27 @@ DataRangeCalculator::calculateColumnRange(const DataSnapshot &snapshot,
   return range;
 }
 
+DataRange
+DataRangeCalculator::calculateColumnRange(const DataSnapshot &snapshot,
+                                          int columnIndex, quint64 fromRow) {
+
+  DataRange range;
+
+  if (columnIndex < 0 || columnIndex >= snapshot.columnCount) {
+    return range;
+  }
+
+  for (quint64 row = fromRow; row < snapshot.rowCount; ++row) {
+    double numValue = snapshot.valueAt(columnIndex, row);
+
+    if (!std::isnan(numValue) && std::isfinite(numValue)) {
+      DataRange::includeValue(range, numValue);
+    }
+  }
+
+  return range;
+}
+
 DataRange DataRangeCalculator::unionRange(const DataRange &a,
                                           const DataRange &b) {
   if (!a.valid) {

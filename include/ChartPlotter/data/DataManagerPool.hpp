@@ -45,7 +45,7 @@ private:
   QVector<DataManagerRuntime> m_dataManagers;
   int m_nextSourceId = 0;
 
-  float m_fps = 10;
+  float m_fps = 60;
   QTimer *m_fpsTimer = nullptr;
 };
 

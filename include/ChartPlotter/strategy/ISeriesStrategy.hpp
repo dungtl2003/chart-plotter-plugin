@@ -28,6 +28,8 @@ struct PointCacheValue {
   quint64 epochId = 0;
   quint64 processedRowCount = 0;
   QVector<QPointF> points;
+  DataRange resolvedXRange;
+  DataRange resolvedYRange;
 };
 
 struct SeriesBuildContext {

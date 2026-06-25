@@ -15,10 +15,10 @@ public:
   DataDownsampler &operator=(DataDownsampler &&) = delete;
   virtual ~DataDownsampler() = default;
 
-  virtual void downsample(QVector<QPointF>::iterator source,
+  virtual void downsample(QVector<QPointF>::const_iterator source,
                           qsizetype sourceSize,
                           QVector<QPointF>::iterator destination,
-                          qsizetype destinationSize) = 0;
+                          qsizetype destinationSize) const = 0;
 };
 
 } // namespace ChartPlotter

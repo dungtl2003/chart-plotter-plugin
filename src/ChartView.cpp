@@ -3,6 +3,7 @@
 #include "ChartPlotter/axis/AxisBuilder.hpp"
 #include "ChartPlotter/constants/ChartConstants.hpp"
 #include "ChartPlotter/data/RenderData.hpp"
+#include "ChartPlotter/downsample/HybridDownsampler.hpp"
 #include "ChartPlotter/downsample/LargestTriangleThreeBuckets.hpp"
 #include "ChartPlotter/factory/SeriesComponentFactoryProvider.hpp"
 #include "ChartPlotter/node/ChartRenderNode.hpp"
@@ -271,8 +272,8 @@ void ChartView::onSnapshotsReady(
   // m_logger->debug(snapshot.toString().toStdString());
   for (const auto &p : snapshots) {
     if (!m_snapshots.contains(p.first) ||
-        (m_snapshots[p.first].epochId == p.second.epochId &&
-         m_snapshots[p.first].version < p.second.version)) {
+        m_snapshots[p.first].epochId != p.second.epochId ||
+        m_snapshots[p.first].version < p.second.version) {
       hasNewChanges = true;
       m_snapshots[p.first] = p.second;
     }
@@ -360,9 +361,10 @@ void ChartView::appendContent(QQmlListProperty<QObject> *property,
 bool ChartView::rebuildRenderPackage() {
   assert(m_plan.valid && m_dataManagerPool);
 
+  // CP_DEBUG("resolving...");
   m_resolvedSeries = m_seriesDataResolver.resolve(
       m_plan.xySeriesIndexes, m_plan.pieSeriesIndexes, m_series,
-      m_dataManagerPool->sourceIds(), m_snapshots);
+      m_dataManagerPool->sourceIds(), m_snapshots, &m_globalPointCache);
 
   if (!m_resolvedSeries.valid) {
     m_logger->warn("ChartView::rebuildRenderPackage: {}",
@@ -388,12 +390,13 @@ bool ChartView::rebuildRenderPackage() {
   }
 
   m_logger->warn("ChartView::rebuildRenderPackage: unsupported layout type");
+  // CP_DEBUG("FINISH rebuilding packages");
   return false;
 }
 
 bool ChartView::rebuildXYSeriesRenderPackage(
     const SeriesResolveResult &resolvedResult) {
-  CP_DEBUG("Start rebuilding XY Series Render package...");
+  // CP_DEBUG("Start rebuilding XY Series Render package...");
   ChartRenderPackage package;
 
   /**
@@ -412,8 +415,9 @@ bool ChartView::rebuildXYSeriesRenderPackage(
       xIsCategory ? &resolvedResult.sharedXCategories : nullptr;
   buildContext.globalLineWidth = m_generalConfig.lineWidth();
   buildContext.globalAntialiasing = m_generalConfig.antialiasing();
-  buildContext.dataDownsampler =
-      std::make_unique<LargestTriangleThreeBuckets>();
+  // buildContext.dataDownsampler =
+  //     std::make_unique<LargestTriangleThreeBuckets>();
+  buildContext.dataDownsampler = std::make_unique<HybridDownsampler>();
   buildContext.globalPointCache = &m_globalPointCache;
 
   if (m_viewportController && m_viewportController->getVisibleRange().valid) {
@@ -467,10 +471,10 @@ bool ChartView::rebuildXYSeriesRenderPackage(
 
     const DataSnapshot &snapshot = snapshotIt.value();
 
-    CP_DEBUG("Strategy {} building data", seriesIndex);
+    // CP_DEBUG("Strategy {} building data", seriesIndex);
     std::unique_ptr<RenderData> data = m_strategies[seriesIndex]->build(
         *series, resolved, snapshot, buildContext);
-    CP_DEBUG("Strategy {} done building data", seriesIndex);
+    // CP_DEBUG("Strategy {} done building data", seriesIndex);
 
     if (!data) {
       m_logger->warn(
@@ -590,7 +594,7 @@ bool ChartView::rebuildXYSeriesRenderPackage(
 
   m_pendingRenderPackage = std::move(package);
 
-  CP_DEBUG("End rebuilding XY Series Render package...");
+  // CP_DEBUG("End rebuilding XY Series Render package...");
   return true;
 }
 

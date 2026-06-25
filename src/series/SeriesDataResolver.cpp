@@ -4,12 +4,12 @@
 
 namespace ChartPlotter {
 
-SeriesResolveResult
-SeriesDataResolver::resolve(const QVector<int> &xySeriesIndexes,
-                            const QVector<int> &pieSeriesIndexes,
-                            const QVector<QPointer<AbstractSeries>> &series,
-                            const QHash<DataSource *, int> &sourceIds,
-                            const QHash<int, DataSnapshot> &snapshots) {
+SeriesResolveResult SeriesDataResolver::resolve(
+    const QVector<int> &xySeriesIndexes, const QVector<int> &pieSeriesIndexes,
+    const QVector<QPointer<AbstractSeries>> &series,
+    const QHash<DataSource *, int> &sourceIds,
+    const QHash<int, DataSnapshot> &snapshots,
+    QHash<PointCacheKey, PointCacheValue> *globalPointCache) {
   SeriesResolveResult result;
 
   for (int seriesIndex : xySeriesIndexes) {
@@ -29,6 +29,7 @@ SeriesDataResolver::resolve(const QVector<int> &xySeriesIndexes,
       return result;
     }
 
+    // CP_DEBUG("Resolving series index {}", seriesIndex);
     ResolvedSeriesData resolved =
         resolveXYSeries(seriesIndex, xySeries, sourceIds, snapshots);
 
@@ -70,16 +71,20 @@ SeriesDataResolver::resolve(const QVector<int> &xySeriesIndexes,
     result.pieSeries.push_back(resolved);
   }
 
+  // CP_DEBUG("checking shared XY binding...");
   if (!checkSharedXYBinding(result)) {
     return result;
   }
 
   if (result.sharedXColumnType == ChartEnums::DataType::String) {
+    // CP_DEBUG("collecting shared X categories...");
     collectSharedXCategories(result, snapshots);
   }
 
-  calculateAbsoluteBounds(result, snapshots);
+  // CP_DEBUG("calculating abs bounds...");
+  calculateAbsoluteBounds(result, snapshots, globalPointCache);
 
+  // CP_DEBUG("RESOLVED!!!!!!!!!!!");
   result.valid = true;
   return result;
 }
@@ -438,11 +443,15 @@ void SeriesDataResolver::collectSharedXCategories(
 }
 
 void SeriesDataResolver::calculateAbsoluteBounds(
-    SeriesResolveResult &result,
-    const QHash<int, DataSnapshot> &snapshots) const {
+    SeriesResolveResult &result, const QHash<int, DataSnapshot> &snapshots,
+    QHash<PointCacheKey, PointCacheValue> *globalPointCache) const {
 
   result.absoluteXRange = {};
   result.absoluteYRange = {};
+
+  // Prevents recalculating the same delta if multiple series share identical
+  // data
+  QSet<PointCacheKey> boundsProcessedThisFrame;
 
   for (ResolvedSeriesData &resolved : result.xySeries) {
     if (!resolved.valid) {
@@ -455,21 +464,51 @@ void SeriesDataResolver::calculateAbsoluteBounds(
     }
 
     const DataSnapshot &snapshot = it.value();
+    PointCacheKey key{resolved.sourceId, resolved.xColumnIndex,
+                      resolved.yColumnIndex};
+    PointCacheValue &cache = (*globalPointCache)[key];
 
-    // Calculate X bounds
-    if (resolved.xColumnType == ChartEnums::DataType::String) {
-      // O(1) calculation: the bounds are always [0, Number of Categories - 1]
-      double maxId =
-          static_cast<double>(std::max(0, result.sharedXCategories.size() - 1));
-      resolved.absoluteXRange =
-          DataRange{.min = 0.0, .max = maxId, .valid = true};
-    } else {
-      resolved.absoluteXRange = DataRangeCalculator::calculateColumnRange(
-          snapshot, resolved.xColumnIndex);
+    if (cache.epochId != snapshot.epochId) {
+      cache.epochId = snapshot.epochId;
+      cache.processedRowCount = 0;
+      cache.points.clear();
+      cache.resolvedXRange = {};
+      cache.resolvedYRange = {};
     }
 
-    resolved.absoluteYRange = DataRangeCalculator::calculateColumnRange(
-        snapshot, resolved.yColumnIndex);
+    if (cache.processedRowCount < snapshot.rowCount &&
+        !boundsProcessedThisFrame.contains(key)) {
+      DataRange deltaX;
+      DataRange deltaY;
+
+      // X Bounds
+      if (resolved.xColumnType == ChartEnums::DataType::String) {
+        double maxId = static_cast<double>(
+            std::max(0, result.sharedXCategories.size() - 1));
+        deltaX = DataRange{.min = 0.0, .max = maxId, .valid = true};
+      } else {
+        deltaX = DataRangeCalculator::calculateColumnRange(
+            snapshot, resolved.xColumnIndex, cache.processedRowCount);
+      }
+
+      // Y Bounds
+      deltaY = DataRangeCalculator::calculateColumnRange(
+          snapshot, resolved.yColumnIndex, cache.processedRowCount);
+
+      cache.resolvedXRange =
+          DataRangeCalculator::unionRange(cache.resolvedXRange, deltaX);
+      cache.resolvedYRange =
+          DataRangeCalculator::unionRange(cache.resolvedYRange, deltaY);
+
+      boundsProcessedThisFrame.insert(key);
+
+      // CRITICAL: Do NOT update cache.processedRowCount here!
+      // The rendering strategies still need to read these exact rows to extract
+      // QPointFs.
+    }
+
+    resolved.absoluteXRange = cache.resolvedXRange;
+    resolved.absoluteYRange = cache.resolvedYRange;
 
     result.absoluteXRange = DataRangeCalculator::unionRange(
         result.absoluteXRange, resolved.absoluteXRange);

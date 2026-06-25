@@ -9,6 +9,8 @@ class DataRangeCalculator {
 public:
   static DataRange calculateColumnRange(const DataSnapshot &snapshot,
                                         qint64 columnIndex);
+  static DataRange calculateColumnRange(const DataSnapshot &snapshot,
+                                        int columnIndex, quint64 fromRow = 0);
 
   static DataRange unionRange(const DataRange &a, const DataRange &b);
 };

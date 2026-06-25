@@ -67,7 +67,7 @@ FetchContent_MakeAvailable(magic_enum)
 
 ################################################################################
 
-find_package(Qt6 REQUIRED COMPONENTS Core Gui Qml Quick)
+find_package(Qt6 REQUIRED COMPONENTS Core Gui Qml Quick Concurrent)
 
 qt_standard_project_setup(REQUIRES 6.8)
 
@@ -156,6 +156,7 @@ set(CHARTPLOTTER_HEADERS
 
     include/ChartPlotter/downsample/DataDownsampler.hpp
     include/ChartPlotter/downsample/LargestTriangleThreeBuckets.hpp
+    include/ChartPlotter/downsample/HybridDownsampler.hpp
 
     include/ChartPlotter/types/ChartEnums.hpp
     include/ChartPlotter/types/DataRange.hpp
@@ -219,6 +220,7 @@ set(CHARTPLOTTER_SOURCES
     src/utils/DataRangeCalculator.cpp
 
     src/downsample/LargestTriangleThreeBuckets.cpp
+    src/downsample/HybridDownsampler.cpp
 )
 
 set(CHARTPLOTTER_SHADERS
@@ -275,6 +277,7 @@ target_link_libraries(${PROJECT_NAME} PRIVATE
     Qt6::Gui
     Qt6::Qml
     Qt6::Quick
+    Qt6::Concurrent
     spdlog::spdlog_header_only # the library will be baked directly in the plugin, leave no trace that this plugin has any libraries
     magic_enum::magic_enum # this is fine because it only has header
 )

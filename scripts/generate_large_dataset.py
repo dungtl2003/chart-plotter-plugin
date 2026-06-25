@@ -4,7 +4,7 @@ import os
 
 output_file = "./temp/large.csv"
 
-total_rows = 5000000
+total_rows = 10_000_000
 total_cols = 2
 
 random_min = -100

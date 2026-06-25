@@ -5,9 +5,10 @@
 namespace ChartPlotter {
 
 class LargestTriangleThreeBuckets : public DataDownsampler {
-  void downsample(QVector<QPointF>::iterator source, qsizetype sourceSize,
+public:
+  void downsample(QVector<QPointF>::const_iterator source, qsizetype sourceSize,
                   QVector<QPointF>::iterator destination,
-                  qsizetype destinationSize) override;
+                  qsizetype destinationSize) const override;
 };
 
 } // namespace ChartPlotter

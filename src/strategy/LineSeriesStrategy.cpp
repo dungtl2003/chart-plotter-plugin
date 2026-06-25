@@ -91,16 +91,17 @@ std::unique_ptr<RenderData> LineSeriesStrategy::build(
     data->points.assign(bound.first, bound.second);
   }
 
-  // if (context.dataDownsampler && context.preferredTotalPoints > 0 &&
-  //     data->points.size() > context.preferredTotalPoints) {
-  //   // CP_DEBUG("down sampling data...");
-  //   QVector<QPointF> originalPoints = std::move(data->points);
-  //   data->points.resize(context.preferredTotalPoints);
-  //
-  //   context.dataDownsampler->downsample(
-  //       originalPoints.begin(), originalPoints.size(), data->points.begin(),
-  //       context.preferredTotalPoints);
-  // }
+  if (context.dataDownsampler && context.preferredTotalPoints > 0 &&
+      data->points.size() > context.preferredTotalPoints) {
+    // CP_DEBUG("downsampling data...");
+    QVector<QPointF> originalPoints = std::move(data->points);
+    data->points.resize(context.preferredTotalPoints);
+
+    context.dataDownsampler->downsample(
+        originalPoints.begin(), originalPoints.size(), data->points.begin(),
+        context.preferredTotalPoints);
+    // CP_DEBUG("data downsampling completed");
+  }
 
   // CP_DEBUG("calculating data range...");
   for (const auto &p : data->points) {

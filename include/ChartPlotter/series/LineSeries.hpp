@@ -75,14 +75,14 @@ signals:
   void useGlobalAntialiasChanged();
 
 private:
-  QColor m_strokeColor = QColor("#ff3333");
+  QColor m_strokeColor = Qt::black;
   float m_strokeWidth = 3.0f;
   bool m_useGlobalStrokeWidth = true;
   bool m_useGlobalAntialias = true;
   ChartEnums::StrokePattern m_strokePattern = ChartEnums::StrokePattern::Solid;
 
   bool m_markerVisible = false;
-  QColor m_markerColor = QColor("#000000");
+  QColor m_markerColor = QColor("#ff3333");
 
   float m_antialias = 1.0f;
 };

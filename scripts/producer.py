@@ -17,7 +17,7 @@ random_max = 100
 increase_min = -10
 increase_max = 10
 
-interval_seconds = 1 / 200
+interval_seconds = 1 / 2000
 
 
 def create_pipe(pipe_path):
