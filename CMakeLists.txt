@@ -67,7 +67,14 @@ FetchContent_MakeAvailable(magic_enum)
 
 ################################################################################
 
-find_package(Qt6 REQUIRED COMPONENTS Core Gui Qml Quick Concurrent)
+find_package(Qt6 REQUIRED COMPONENTS 
+    Core 
+    Gui 
+    Qml 
+    Quick 
+    Concurrent 
+    WebSockets
+)
 
 qt_standard_project_setup(REQUIRES 6.8)
 
@@ -90,6 +97,7 @@ set(CHARTPLOTTER_QMLS
     qml/ChartPlotter/Legend.qml
     qml/ChartPlotter/ChartTitle.qml
     qml/ChartPlotter/ChartSettings.qml
+    qml/ChartPlotter/ChartZoomButton.qml
 )
 
 set(CHARTPLOTTER_HEADERS
@@ -136,10 +144,13 @@ set(CHARTPLOTTER_HEADERS
     include/ChartPlotter/data/reader/AbstractDataReader.hpp
     include/ChartPlotter/data/reader/FileDataReader.hpp
     include/ChartPlotter/data/reader/FifoDataReader.hpp
+    include/ChartPlotter/data/reader/SocketDataReader.hpp
+    include/ChartPlotter/data/reader/WebSocketDataReader.hpp
     include/ChartPlotter/data/reader/DataReaderFactory.hpp
 
     include/ChartPlotter/data/parser/AbstractDataParser.hpp
     include/ChartPlotter/data/parser/CsvDataParser.hpp
+    include/ChartPlotter/data/parser/BinanceBasicJsonDataParser.hpp
     include/ChartPlotter/data/parser/DataParserFactory.hpp
 
     include/ChartPlotter/axis/Axis.hpp
@@ -200,10 +211,13 @@ set(CHARTPLOTTER_SOURCES
     src/data/reader/AbstractDataReader.cpp
     src/data/reader/FileDataReader.cpp
     src/data/reader/FifoDataReader.cpp
+    src/data/reader/SocketDataReader.cpp
+    src/data/reader/WebSocketDataReader.cpp
     src/data/reader/DataReaderFactory.cpp
 
     src/data/parser/AbstractDataParser.cpp
     src/data/parser/CsvDataParser.cpp
+    src/data/parser/BinanceBasicJsonDataParser.cpp
     src/data/parser/DataParserFactory.cpp
 
     src/axis/AxisBuilder.cpp
@@ -278,6 +292,7 @@ target_link_libraries(${PROJECT_NAME} PRIVATE
     Qt6::Qml
     Qt6::Quick
     Qt6::Concurrent
+    Qt6::WebSockets
     spdlog::spdlog_header_only # the library will be baked directly in the plugin, leave no trace that this plugin has any libraries
     magic_enum::magic_enum # this is fine because it only has header
 )
@@ -316,6 +331,7 @@ if(CMAKE_PROJECT_NAME STREQUAL PROJECT_NAME)
     
     if(BUILD_EXAMPLES)
         add_subdirectory(examples/BasicChart)
+        add_subdirectory(examples/BinanceChart)
         add_subdirectory(examples/LargeDatasetChart)
         add_subdirectory(examples/RealTimeChart)
         add_subdirectory(examples/CategoryLineChart)

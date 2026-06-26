@@ -9,7 +9,7 @@ import ChartPlotter
 Button {
     id: root
 
-    property var chart: null        // assign your ChartView
+    property var chart: null
 
     text: "Settings"
     onClicked: {
@@ -35,6 +35,7 @@ Button {
         gAa.value = chart.generalConfig.antialiasing;
         gXTicks.value = chart.generalConfig.xPreferredTickCount;
         gYTicks.value = chart.generalConfig.yPreferredTickCount;
+        gFps.value = chart.generalConfig.fps;
 
         lines.clear();
         const list = chart.seriesList;
@@ -69,7 +70,7 @@ Button {
             s.markerVisible = d.showMarker;
             s.strokePattern = d.pattern;
         }
-        chart.applySettings(gWidth.value, gAa.value, gXTicks.value, gYTicks.value);   // global + one rebuild
+        chart.applySettings(gWidth.value, gAa.value, gXTicks.value, gYTicks.value, gFps.value);   // global + one rebuild
     }
 
     component SliderRow: RowLayout {
@@ -123,6 +124,14 @@ Button {
                 ColumnLayout {
                     anchors.fill: parent
                     spacing: 6
+
+                    SliderRow {
+                        id: gFps
+                        label: "FPS"
+                        from: ChartConstants.FPS_MIN
+                        to: ChartConstants.FPS_MAX
+                        stepSize: 1
+                    }
                     SliderRow {
                         id: gWidth
                         label: "Stroke width"

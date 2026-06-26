@@ -4,3 +4,5 @@ build*
 bin
 compile_commands.json
 .qmlls.ini
+.env
+.venv

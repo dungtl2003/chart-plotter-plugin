@@ -41,6 +41,7 @@ struct SeriesBuildContext {
   DataRange viewportXRange;
   std::unique_ptr<DataDownsampler> dataDownsampler;
   qsizetype preferredTotalPoints = 200;
+  bool shouldDownsample = true;
 
   QHash<PointCacheKey, PointCacheValue> *globalPointCache;
 };

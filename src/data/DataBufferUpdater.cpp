@@ -18,9 +18,10 @@ void DataBufferUpdater::setConfig(const DataBufferUpdaterConfig &config) {
     m_config.skipRows = 0;
   }
 
-  if (m_config.mode == ChartEnums::DataMode::Static) {
-    m_canInferTypes = true;
-  }
+  m_canInferTypes = true;
+  // if (m_config.mode == ChartEnums::DataMode::Static) {
+  //   m_canInferTypes = true;
+  // }
 
   if (m_config.totalColumns > 0) {
     for (const auto &schema : m_config.columns) {

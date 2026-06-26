@@ -1,5 +1,6 @@
 import QtQuick
 import QtQuick.Window
+import QtQuick.Layouts
 import ChartPlotter
 
 Window {
@@ -10,61 +11,64 @@ Window {
     color: "white"
 
     ChartView {
+        id: chart
+
         DataSource {
-            id: dataSrc1
+            id: dataSrc
             url: "pipe:///tmp/pipe1"
             format: ChartEnums.DataFormat.Csv
-            totalColumns: 2
-            columns: [
-                Column {
-                    idx: 0
-                    name: "time"
-                    type: ChartEnums.DataType.Number
-                },
-                Column {
-                    idx: 1
-                    name: "temperature"
-                    type: ChartEnums.DataType.Number
-                }
-            ]
+            // totalColumns: 2
+            // columns: [
+            //     Column {
+            //         idx: 0
+            //         name: "time"
+            //         type: ChartEnums.DataType.Number
+            //     },
+            //     Column {
+            //         idx: 1
+            //         name: "temperature"
+            //         type: ChartEnums.DataType.Number
+            //     }
+            // ]
         }
-        // DataSource {
-        //     id: dataSrc2
-        //     url: "pipe:///tmp/pipe2"
-        //     format: ChartEnums.DataFormat.Csv
-        //     totalColumns: 2
-        //     columns: [
-        //         Column {
-        //             idx: 0
-        //             name: "time"
-        //             type: ChartEnums.DataType.Number
-        //         },
-        //         Column {
-        //             idx: 1
-        //             name: "temperature"
-        //             type: ChartEnums.DataType.Number
-        //         }
-        //     ]
-        // }
         LineSeries {
-            source: dataSrc1
+            source: dataSrc
             x: "time"
             y: "temperature"
             xColumn: 0
             yColumn: 1
-            antialias: 1
         }
-        // LineSeries {
-        //     source: dataSrc2
-        //     x: "time"
-        //     y: "temperature"
-        //     xColumn: 0
-        //     yColumn: 1
-        //     strokeColor: "#000000"
-        //     // markerVisible: true
-        // }
 
-        name: "iloveyou"
+        name: "Real-time Data Chart"
+        title: chart.name
         anchors.fill: parent
+
+        titleItem: ChartTitle {
+            text: chart.title
+        }
+        legendPosition: ChartEnums.LegendPosition.Bottom
+        legendItem: Legend {
+            model: chart.legendModel
+        }
+        generalConfig {
+            antialiasing: 1
+            lineWidth: 3
+            fps: 144
+            pointSpacingPx: 10
+        }
+    }
+
+    RowLayout {
+        anchors.right: parent.right
+        anchors.top: parent.top
+        anchors.margins: 12
+
+        ChartZoomButton {
+            chart: chart
+        }
+
+        ChartSettings {
+            chart: chart
+        }
     }
 }

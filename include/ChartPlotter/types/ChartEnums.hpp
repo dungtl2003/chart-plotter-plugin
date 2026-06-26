@@ -20,7 +20,15 @@ public:
   enum class DataMode { Static, Realtime };
   Q_ENUM(DataMode)
 
-  enum class DataFormat { Unknown, Csv, Tsv, Xlsx };
+  enum class DataFormat {
+    Unknown,
+    Csv,
+    Tsv,
+    Xlsx,
+    Json,
+    BasicJson,
+    BinanceBasicJson
+  };
   Q_ENUM(DataFormat)
 
   enum class InteractionMode { None, Drag, Zoom, Crop, Pointing, Clear };

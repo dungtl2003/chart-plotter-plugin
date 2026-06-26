@@ -18,7 +18,8 @@ private:
   std::expected<void, QString> convertRowsToPoints(
       QVector<QPointF> &destination, const AbstractSeries &series,
       const ResolvedSeriesData &resolved, const DataSnapshot &snapshot,
-      const SeriesBuildContext &context, qsizetype fromRow) const;
+      const SeriesBuildContext &context, qsizetype fromRow,
+      qsizetype endRow) const;
   std::expected<void, QString>
   loadSeriesConfig(LineRenderData *data, const AbstractSeries &series,
                    const SeriesBuildContext &context) const;

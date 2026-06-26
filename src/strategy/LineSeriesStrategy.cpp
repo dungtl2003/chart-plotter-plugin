@@ -1,5 +1,7 @@
 #include "ChartPlotter/strategy/LineSeriesStrategy.hpp"
 
+#include "ChartConstants.hpp"
+#include "ChartPlotter/constants/ChartConstants.hpp"
 #include "ChartPlotter/data/DataBuffer.hpp"
 #include "ChartPlotter/series/LineSeries.hpp"
 #include "ChartPlotter/utils/LoggerManager.hpp"
@@ -49,7 +51,7 @@ std::unique_ptr<RenderData> LineSeriesStrategy::build(
 
     auto convertResult =
         convertRowsToPoints(newPoints, series, resolved, snapshot, context,
-                            cache.processedRowCount);
+                            cache.processedRowCount, snapshot.rowCount);
     if (!convertResult) {
       CP_WARN(convertResult.error().toStdString());
       return data;
@@ -117,7 +119,8 @@ std::unique_ptr<RenderData> LineSeriesStrategy::build(
 std::expected<void, QString> LineSeriesStrategy::convertRowsToPoints(
     QVector<QPointF> &destination, const AbstractSeries &series,
     const ResolvedSeriesData &resolved, const DataSnapshot &snapshot,
-    const SeriesBuildContext &context, qsizetype fromRow) const {
+    const SeriesBuildContext &context, qsizetype fromRow,
+    qsizetype endRow) const {
   const int xIndex = resolved.xColumnIndex;
   const int yIndex = resolved.yColumnIndex;
   const ChartEnums::DataType xType = resolved.xColumnType;
@@ -129,7 +132,7 @@ std::expected<void, QString> LineSeriesStrategy::convertRowsToPoints(
         "LineSeriesStrategy::build: unsupported x column type");
   }
 
-  for (qsizetype row = fromRow; row < snapshot.rowCount; ++row) {
+  for (qsizetype row = fromRow; row < endRow; ++row) {
     double x = snapshot.valueAt(xIndex, row);
     double y = snapshot.valueAt(yIndex, row);
 
@@ -166,11 +169,15 @@ LineSeriesStrategy::loadSeriesConfig(LineRenderData *data,
         "LineSeriesStrategy::build: series is not LineSeries");
   }
 
-  const float width = lineSeries->useGlobalStrokeWidth()
-                          ? context.globalLineWidth
-                          : lineSeries->strokeWidth();
-  const float aa = lineSeries->useGlobalAntialias() ? context.globalAntialiasing
-                                                    : lineSeries->antialias();
+  const float width =
+      std::clamp(lineSeries->useGlobalStrokeWidth() ? context.globalLineWidth
+                                                    : lineSeries->strokeWidth(),
+                 ChartConstants::LINE_STROKE_WIDTH_MIN,
+                 ChartConstants::LINE_STROKE_WIDTH_MAX);
+  const float aa =
+      std::clamp(lineSeries->useGlobalAntialias() ? context.globalAntialiasing
+                                                  : lineSeries->antialias(),
+                 ChartConstants::LINE_AA_MIN, ChartConstants::LINE_AA_MAX);
 
   data->marker.color = lineSeries->markerColor();
   data->marker.visible = lineSeries->markerVisible();

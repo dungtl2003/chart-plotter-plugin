@@ -20,19 +20,31 @@
 
 namespace ChartPlotter {
 
-class GeneralConfig {
-  Q_GADGET
+class GeneralConfig : public QObject {
+  Q_OBJECT
+  QML_ELEMENT
 
-  Q_PROPERTY(float lineWidth READ lineWidth WRITE setLineWidth)
-  Q_PROPERTY(float antialiasing READ antialiasing WRITE setAntialiasing)
+  Q_PROPERTY(
+      float lineWidth READ lineWidth WRITE setLineWidth NOTIFY lineWidthChanged)
+  Q_PROPERTY(float antialiasing READ antialiasing WRITE setAntialiasing NOTIFY
+                 antialiasingChanged)
   Q_PROPERTY(int xPreferredTickCount READ xPreferredTickCount WRITE
-                 setXPreferredTickCount)
+                 setXPreferredTickCount NOTIFY xPreferredTickCountChanged)
   Q_PROPERTY(int yPreferredTickCount READ yPreferredTickCount WRITE
-                 setYPreferredTickCount)
+                 setYPreferredTickCount NOTIFY yPreferredTickCountChanged)
+  Q_PROPERTY(int pointSpacingPx READ pointSpacingPx WRITE setPointSpacingPx
+                 NOTIFY pointSpacingPxChanged)
+  Q_PROPERTY(int fps READ fps WRITE setFps NOTIFY fpsChanged)
 
 public:
-  bool operator==(const GeneralConfig &other) const;
-  bool operator!=(const GeneralConfig &other) const;
+  static constexpr float DEFAULT_LINE_WIDTH = 5.0;
+  static constexpr float DEFAULT_AA = 1.0;
+  static constexpr int DEFAULT_X_PREFERRED_TICK_COUNT = 6;
+  static constexpr int DEFAULT_Y_PREFFERED_TICK_COUNT = 6;
+  static constexpr int DEFAULT_POINT_SPACING_PX = 8;
+  static constexpr int DEFAULT_FPS = 60;
+
+  explicit GeneralConfig(QObject *parent = nullptr);
 
   float lineWidth() const;
   void setLineWidth(float newWidth);
@@ -46,11 +58,27 @@ public:
   int yPreferredTickCount() const;
   void setYPreferredTickCount(int tickCount);
 
+  int pointSpacingPx() const;
+  void setPointSpacingPx(int px);
+
+  int fps() const;
+  void setFps(int fps);
+
+signals:
+  void lineWidthChanged();
+  void antialiasingChanged();
+  void xPreferredTickCountChanged();
+  void yPreferredTickCountChanged();
+  void pointSpacingPxChanged();
+  void fpsChanged();
+
 private:
-  float m_lineWidth = 5.0f;
-  float m_antialiasing = 1.0f;
-  int m_xPreferredTickCount = 6;
-  int m_yPreferredTickCount = 6;
+  float m_lineWidth = DEFAULT_LINE_WIDTH;
+  float m_antialiasing = DEFAULT_AA;
+  int m_xPreferredTickCount = DEFAULT_X_PREFERRED_TICK_COUNT;
+  int m_yPreferredTickCount = DEFAULT_Y_PREFFERED_TICK_COUNT;
+  int m_pointSpacingPx = DEFAULT_POINT_SPACING_PX;
+  int m_fps = DEFAULT_FPS;
 };
 
 class ChartView : public QQuickItem {
@@ -60,8 +88,8 @@ class ChartView : public QQuickItem {
 
   Q_PROPERTY(QQmlListProperty<QObject> content READ content)
   Q_PROPERTY(QString name READ name WRITE setName NOTIFY nameChanged)
-  Q_PROPERTY(ChartPlotter::GeneralConfig generalConfig READ generalConfig WRITE
-                 setGeneralConfig NOTIFY generalConfigChanged)
+  Q_PROPERTY(
+      ChartPlotter::GeneralConfig *generalConfig READ generalConfig CONSTANT)
 
   Q_PROPERTY(QString title READ title WRITE setTitle NOTIFY titleChanged)
   Q_PROPERTY(
@@ -92,8 +120,7 @@ public:
   QString name() const;
   void setName(QString newName);
 
-  GeneralConfig generalConfig() const;
-  void setGeneralConfig(const GeneralConfig &newConfig);
+  GeneralConfig *generalConfig();
 
   QString title() const;
   void setTitle(const QString &title);
@@ -113,7 +140,8 @@ public:
   Q_INVOKABLE void applySettings(float globalStrokeWidth,
                                  float globalAntialiasing,
                                  int xPreferredTickCount,
-                                 int yPreferredTickCount);
+                                 int yPreferredTickCount, int fps);
+  Q_INVOKABLE void resetZoom();
 
 public slots:
   void onDataError(const QString &message);
@@ -161,7 +189,6 @@ private:
   QPointer<QQuickItem> m_legendItem;
   QRectF m_plotOuterRect;
 
-  float m_fps = 60.0;
   bool m_updatePending = false;
   QTimer *m_updateTimer = nullptr;
   QElapsedTimer m_lastUpdateTimer;

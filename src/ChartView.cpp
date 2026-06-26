@@ -4,48 +4,74 @@
 #include "ChartPlotter/constants/ChartConstants.hpp"
 #include "ChartPlotter/data/RenderData.hpp"
 #include "ChartPlotter/downsample/HybridDownsampler.hpp"
-#include "ChartPlotter/downsample/LargestTriangleThreeBuckets.hpp"
+// #include "ChartPlotter/downsample/LargestTriangleThreeBuckets.hpp"
 #include "ChartPlotter/factory/SeriesComponentFactoryProvider.hpp"
 #include "ChartPlotter/node/ChartRenderNode.hpp"
 #include "ChartPlotter/utils/DataRangeCalculator.hpp"
 #include "ChartPlotter/utils/LoggerManager.hpp"
 
-#include <algorithm>
-
 namespace ChartPlotter {
+
+GeneralConfig::GeneralConfig(QObject *parent) : QObject(parent) {}
 
 float GeneralConfig::lineWidth() const { return m_lineWidth; }
 void GeneralConfig::setLineWidth(float newLineWidth) {
+  if (m_lineWidth == newLineWidth) {
+    return;
+  }
+
   m_lineWidth = newLineWidth;
+  emit lineWidthChanged();
 }
 
 float GeneralConfig::antialiasing() const { return m_antialiasing; }
 void GeneralConfig::setAntialiasing(float a) {
-  m_antialiasing =
-      std::clamp(a, ChartConstants::LINE_AA_MIN, ChartConstants::LINE_AA_MAX);
+  if (m_antialiasing == a) {
+    return;
+  }
+
+  m_antialiasing = a;
+  emit antialiasingChanged();
 }
 
 int GeneralConfig::xPreferredTickCount() const { return m_xPreferredTickCount; }
 void GeneralConfig::setXPreferredTickCount(int tickCount) {
-  m_xPreferredTickCount = std::clamp(tickCount, ChartConstants::TICK_COUNT_MIN,
-                                     ChartConstants::TICK_COUNT_MAX);
+  if (m_xPreferredTickCount == tickCount) {
+    return;
+  }
+
+  m_xPreferredTickCount = tickCount;
+  emit xPreferredTickCountChanged();
 }
 
 int GeneralConfig::yPreferredTickCount() const { return m_yPreferredTickCount; }
 void GeneralConfig::setYPreferredTickCount(int tickCount) {
-  m_yPreferredTickCount = std::clamp(tickCount, ChartConstants::TICK_COUNT_MIN,
-                                     ChartConstants::TICK_COUNT_MAX);
+  if (m_yPreferredTickCount == tickCount) {
+    return;
+  }
+
+  m_yPreferredTickCount = tickCount;
+  emit yPreferredTickCountChanged();
 }
 
-bool GeneralConfig::operator==(const GeneralConfig &o) const {
-  return m_lineWidth == o.m_lineWidth && m_antialiasing == o.m_antialiasing &&
-         m_xPreferredTickCount == o.m_xPreferredTickCount &&
-         m_yPreferredTickCount == o.m_yPreferredTickCount;
+int GeneralConfig::pointSpacingPx() const { return m_pointSpacingPx; }
+void GeneralConfig::setPointSpacingPx(int px) {
+  if (m_pointSpacingPx == px) {
+    return;
+  }
+
+  m_pointSpacingPx = px;
+  emit pointSpacingPxChanged();
 }
-bool GeneralConfig::operator!=(const GeneralConfig &o) const {
-  return m_lineWidth != o.lineWidth() || m_antialiasing != o.m_antialiasing ||
-         m_xPreferredTickCount != o.m_xPreferredTickCount ||
-         m_yPreferredTickCount != o.m_yPreferredTickCount;
+
+int GeneralConfig::fps() const { return m_fps; }
+void GeneralConfig::setFps(int fps) {
+  if (m_fps == fps) {
+    return;
+  }
+
+  m_fps = fps;
+  emit fpsChanged();
 }
 
 ChartView::ChartView(QQuickItem *parent) : QQuickItem(parent) {
@@ -134,9 +160,9 @@ void ChartView::wheelEvent(QWheelEvent *event) {
   // }
 
   /**
-   * When you scroll a standard mouse wheel by one physical notch, the operating
-   * system and Qt do not return 1. Instead, they return a standard metric value
-   * of 120 units.
+   * When you scroll a standard mouse wheel by one physical notch, the
+   * operating system and Qt do not return 1. Instead, they return a standard
+   * metric value of 120 units.
    *
    * This 120 value is an industry-standard constant designed to allow
    * high-precision mice or smooth-scrolling trackpads to send smaller
@@ -148,9 +174,9 @@ void ChartView::wheelEvent(QWheelEvent *event) {
    *
    * 360 degree / 24 notches = 15 degree per notch
    *
-   * Because the hardware sends a value of 120 for that exact same notch, we can
-   * find the mathematical relationship between hardware units and real-world
-   * angles:
+   * Because the hardware sends a value of 120 for that exact same notch, we
+   * can find the mathematical relationship between hardware units and
+   * real-world angles:
    *
    * 120 hardware units / 15 degree = 8
    *
@@ -249,7 +275,8 @@ void ChartView::onDataError(const QString &message) {
   m_logger->warn(message.toStdString());
 }
 
-// void ChartView::onSnapshotReady(int sourceId, const DataSnapshot &snapshot) {
+// void ChartView::onSnapshotReady(int sourceId, const DataSnapshot &snapshot)
+// {
 //   // m_logger->debug(snapshot.toString().toStdString());
 //
 //   CP_DEBUG("Received onSnapshotReady from DataManagerPool");
@@ -410,6 +437,11 @@ bool ChartView::rebuildXYSeriesRenderPackage(
   const bool xIsCategory =
       resolvedResult.sharedXColumnType == ChartEnums::DataType::String;
 
+  const QRectF outer =
+      m_plotOuterRect.isValid() ? m_plotOuterRect : boundingRect();
+  const auto m = m_plan.plotMargins;
+  const auto plotArea = outer.adjusted(m.left, m.top, -m.right, -m.bottom);
+
   SeriesBuildContext buildContext;
   buildContext.xCategories =
       xIsCategory ? &resolvedResult.sharedXCategories : nullptr;
@@ -419,6 +451,9 @@ bool ChartView::rebuildXYSeriesRenderPackage(
   //     std::make_unique<LargestTriangleThreeBuckets>();
   buildContext.dataDownsampler = std::make_unique<HybridDownsampler>();
   buildContext.globalPointCache = &m_globalPointCache;
+  // N = w / s
+  buildContext.preferredTotalPoints =
+      plotArea.width() / m_generalConfig.pointSpacingPx();
 
   if (m_viewportController && m_viewportController->getVisibleRange().valid) {
     buildContext.viewportXRange = m_viewportController->getVisibleRange();
@@ -523,8 +558,8 @@ bool ChartView::rebuildXYSeriesRenderPackage(
   }
 
   if (!globalX.valid || !globalY.valid) {
-    m_logger->warn(
-        "ChartView::rebuildXYSeriesRenderPackage: global XY range is invalid");
+    m_logger->warn("ChartView::rebuildXYSeriesRenderPackage: global XY range "
+                   "is invalid");
     return false;
   }
 
@@ -685,15 +720,7 @@ void ChartView::setName(QString newName) {
       appendUniqueId("ChartView_" + m_name.toStdString() + "_"));
 }
 
-GeneralConfig ChartView::generalConfig() const { return m_generalConfig; }
-void ChartView::setGeneralConfig(const GeneralConfig &newConfig) {
-  if (m_generalConfig == newConfig) {
-    return;
-  }
-
-  m_generalConfig = newConfig;
-  emit generalConfigChanged();
-}
+GeneralConfig *ChartView::generalConfig() { return &m_generalConfig; }
 
 void ChartView::resetStrategies() {
   for (auto &strat : m_strategies) {
@@ -790,7 +817,9 @@ void ChartView::scheduleUpdate() {
 
   m_updatePending = true;
 
-  qint64 interval = 1000 / m_fps;
+  qint64 interval =
+      1000 / std::clamp(m_generalConfig.fps(), ChartConstants::FPS_MIN,
+                        ChartConstants::FPS_MAX);
   qint64 elapsed = m_lastUpdateTimer.elapsed();
 
   if (elapsed >= interval) {
@@ -909,18 +938,30 @@ QVariantList ChartView::seriesList() const {
 }
 
 void ChartView::applySettings(float globalStrokeWidth, float globalAntialiasing,
-                              int xPreferredTickCount,
-                              int yPreferredTickCount) {
+                              int xPreferredTickCount, int yPreferredTickCount,
+                              int fps) {
   m_generalConfig.setLineWidth(globalStrokeWidth);
   m_generalConfig.setAntialiasing(globalAntialiasing);
   m_generalConfig.setXPreferredTickCount(xPreferredTickCount);
   m_generalConfig.setYPreferredTickCount(yPreferredTickCount);
+  m_generalConfig.setFps(fps);
 
   emit generalConfigChanged();
 
   if (m_plan.valid && rebuildRenderPackage()) {
     // user can change line color and make legend changes
     rebuildLegendModel();
+    scheduleUpdate();
+  }
+}
+
+void ChartView::resetZoom() {
+  if (!m_viewportController) {
+    return;
+  }
+
+  m_viewportController->resetZoom();
+  if (m_plan.valid && rebuildRenderPackage()) {
     scheduleUpdate();
   }
 }
