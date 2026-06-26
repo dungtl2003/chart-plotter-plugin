@@ -29,8 +29,6 @@ AxisTicks ValueAxis::calculateTicks(const AxisRange &range, int targetTickCount,
     if (!isDateTime) {
       tick.label = formatTickLabel(value, step);
     } else {
-      // tick.label =
-      // QDateTime::fromMSecsSinceEpoch(value).toString("yyyy-MM-dd");
       tick.label =
           QDateTime::fromMSecsSinceEpoch(value).toString("MM/dd/yyyy hh:mm:ss");
     }

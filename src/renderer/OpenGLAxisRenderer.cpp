@@ -114,10 +114,6 @@ void OpenGLAxisRenderer::render(const ChartRenderContext &context) {
   const AxisRange xRange = context.xAxisRange;
   const AxisRange yRange = context.yAxisRange;
 
-  if (axisData->ticks.size() < 2) {
-    return;
-  }
-
   QVector<Tick> ticks;
   ticks.reserve(axisData->ticks.size());
   for (const auto &tick : axisData->ticks) {

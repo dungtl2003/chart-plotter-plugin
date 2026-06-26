@@ -1,6 +1,5 @@
 #include "ChartPlotter/axis/AxisBuilder.hpp"
 #include "ChartPlotter/axis/ValueAxis.hpp"
-#include <qpoint.h>
 
 namespace ChartPlotter {
 
