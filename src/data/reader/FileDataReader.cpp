@@ -1,10 +1,11 @@
 #include "ChartPlotter/data/reader/FileDataReader.hpp"
 #include "ChartPlotter/types/ChartEnums.hpp"
+#include "ChartPlotter/utils/LoggerManager.hpp"
 
 namespace ChartPlotter {
 
 namespace {
-constexpr qint64 DefaultChunkSize = 64 * ChartEnums::DataUnit::Kb;
+constexpr qint64 DefaultChunkSize = 2 * ChartEnums::DataUnit::Mb;
 }
 
 FileDataReader::FileDataReader(QObject *parent) : AbstractDataReader(parent) {}

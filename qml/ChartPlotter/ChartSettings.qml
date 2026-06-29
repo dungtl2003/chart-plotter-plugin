@@ -36,22 +36,45 @@ Button {
         gXTicks.value = chart.generalConfig.xPreferredTickCount;
         gYTicks.value = chart.generalConfig.yPreferredTickCount;
         gFps.value = chart.generalConfig.fps;
+        gDownsample.currentIndex = chart.generalConfig.downsampleMode;
 
         lines.clear();
         const list = chart.seriesList;
         for (let i = 0; i < list.length; ++i) {
             const s = list[i];
-            lines.append({
-                title: (s.name && s.name.length) ? s.name : ("Series " + (i + 1)),
-                swatch: "" + s.strokeColor,
-                useGlobalWidth: s.useGlobalStrokeWidth,
-                width: s.strokeWidth,
-                useGlobalAa: s.useGlobalAntialias,
-                aa: s.antialias,
-                marker: "" + s.markerColor,
-                showMarker: s.markerVisible,
-                pattern: s.strokePattern
-            });
+            const title = (s.name && s.name.length) ? s.name : ("Series " + (i + 1));
+
+            // Unified row — keep every role present so ListModel roles stay stable.
+            const row = {
+                kind: "line",
+                title: title,
+                swatch: "#000000",
+                useGlobalWidth: true,
+                width: 3,
+                useGlobalAa: true,
+                aa: 1,
+                marker: "#ff3333",
+                showMarker: false,
+                pattern: ChartEnums.StrokePattern.Solid
+            };
+
+            if (s.seriesType === ChartEnums.SeriesType.Bar) {
+                // Bars auto-size to their band — only the color is editable.
+                row.kind = "bar";
+                row.swatch = "" + s.color;
+            } else {
+                row.kind = "line";
+                row.swatch = "" + s.strokeColor;
+                row.useGlobalWidth = s.useGlobalStrokeWidth;
+                row.width = s.strokeWidth;
+                row.useGlobalAa = s.useGlobalAntialias;
+                row.aa = s.antialias;
+                row.marker = "" + s.markerColor;
+                row.showMarker = s.markerVisible;
+                row.pattern = s.strokePattern;
+            }
+
+            lines.append(row);
         }
     }
 
@@ -61,16 +84,21 @@ Button {
         const list = chart.seriesList;
         for (let i = 0; i < list.length && i < lines.count; ++i) {
             const d = lines.get(i), s = list[i];
-            s.useGlobalStrokeWidth = d.useGlobalWidth;
-            s.strokeColor = d.swatch;
-            s.strokeWidth = d.width;
-            s.useGlobalAntialias = d.useGlobalAa;
-            s.antialias = d.aa;
-            s.markerColor = d.marker;
-            s.markerVisible = d.showMarker;
-            s.strokePattern = d.pattern;
+            if (d.kind === "bar") {
+                s.color = d.swatch;
+            } else {
+                s.useGlobalStrokeWidth = d.useGlobalWidth;
+                s.strokeColor = d.swatch;
+                s.strokeWidth = d.width;
+                s.useGlobalAntialias = d.useGlobalAa;
+                s.antialias = d.aa;
+                s.markerColor = d.marker;
+                s.markerVisible = d.showMarker;
+                s.strokePattern = d.pattern;
+            }
         }
-        chart.applySettings(gWidth.value, gAa.value, gXTicks.value, gYTicks.value, gFps.value);   // global + one rebuild
+        // global + one rebuild
+        chart.applySettings(gWidth.value, gAa.value, gXTicks.value, gYTicks.value, gFps.value, gDownsample.currentIndex);
     }
 
     component SliderRow: RowLayout {
@@ -160,11 +188,24 @@ Button {
                         to: ChartConstants.TICK_COUNT_MAX
                         stepSize: 1
                     }
+                    RowLayout {
+                        spacing: 10
+                        Label {
+                            text: "Downsample"
+                            Layout.preferredWidth: 95
+                        }
+                        ComboBox {
+                            id: gDownsample
+                            Layout.fillWidth: true
+                            // index order matches ChartEnums.DownsampleMode (MinMax=0, Lttb=1)
+                            model: ["Min/Max envelope", "LTTB (clean line)"]
+                        }
+                    }
                 }
             }
 
             Label {
-                text: "Per line"
+                text: "Per series"
                 font.bold: true
                 Layout.topMargin: 4
             }
@@ -182,6 +223,7 @@ Button {
                     required property var model
                     required property int index
                     readonly property int line: index   // capture before inner scopes shadow `index`
+                    readonly property bool isBar: model.kind === "bar"
                     readonly property int patternIdx: Math.max(0, root.patternValues.indexOf(model.pattern))
 
                     width: ListView.view.width
@@ -193,56 +235,62 @@ Button {
                         RowLayout {
                             Rectangle {
                                 Layout.preferredWidth: 20
-                                Layout.preferredHeight: 4
+                                Layout.preferredHeight: card.isBar ? 14 : 4
                                 radius: 2
                                 color: card.model.swatch
                                 Layout.alignment: Qt.AlignVCenter
                             }
                             Label {
-                                text: card.model.title
+                                text: card.model.title + (card.isBar ? "  (Bar)" : "")
                                 font.bold: true
                                 Layout.fillWidth: true
                             }
                         }
 
+                        // ---- line-only: stroke width (bars auto-size to band) ----
                         CheckBox {
+                            visible: !card.isBar
                             text: "Stroke width — follow global"
                             checked: card.model.useGlobalWidth
                             onToggled: lines.setProperty(card.line, "useGlobalWidth", checked)
                         }
                         SliderRow {
-                            visible: !card.model.useGlobalWidth
+                            visible: !card.isBar && !card.model.useGlobalWidth
                             label: "Width"
-                            from: 1
-                            to: 10
+                            from: ChartConstants.LINE_STROKE_WIDTH_MIN
+                            to: ChartConstants.LINE_STROKE_WIDTH_MAX
                             stepSize: 1
                             value: card.model.width
                             onMoved: lines.setProperty(card.line, "width", value)
                         }
 
+                        // ---- line-only: antialiasing ----
                         CheckBox {
+                            visible: !card.isBar
                             text: "Antialiasing — follow global"
                             checked: card.model.useGlobalAa
                             onToggled: lines.setProperty(card.line, "useGlobalAa", checked)
                         }
                         SliderRow {
-                            visible: !card.model.useGlobalAa
+                            visible: !card.isBar && !card.model.useGlobalAa
                             label: "AA"
-                            from: 0
-                            to: 4
+                            from: ChartConstants.LINE_AA_MIN
+                            to: ChartConstants.LINE_AA_MAX
                             stepSize: 1
                             value: card.model.aa
                             onMoved: lines.setProperty(card.line, "aa", value)
                         }
 
-                        // ---- markers ----
+                        // ---- line-only: markers ----
                         CheckBox {
                             id: markerCheckbox
+                            visible: !card.isBar
                             text: "Show markers"
                             checked: card.model.showMarker
                             onToggled: lines.setProperty(card.line, "showMarker", checked)
                         }
                         RowLayout {
+                            visible: !card.isBar
                             opacity: card.model.showMarker ? 1.0 : 0.45
                             Label {
                                 text: "Marker color"
@@ -269,9 +317,10 @@ Button {
                             }
                         }
 
+                        // ---- color (line or bar) ----
                         RowLayout {
                             Label {
-                                text: "Line color"
+                                text: card.isBar ? "Bar color" : "Line color"
                                 Layout.fillWidth: true
                             }
                             Rectangle {
@@ -291,7 +340,9 @@ Button {
                             }
                         }
 
+                        // ---- line-only: line style ----
                         RowLayout {
+                            visible: !card.isBar
                             Label {
                                 text: "Line style"
                                 Layout.fillWidth: true

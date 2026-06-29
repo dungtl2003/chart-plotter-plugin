@@ -16,7 +16,7 @@ struct DataReadConfig {
   qint64 totalColumns = -1;
   QUrl url;
   ChartEnums::DataFormat format = ChartEnums::DataFormat::Unknown;
-  qint64 chunkSize = 64 * ChartEnums::DataUnit::Kb;
+  qint64 chunkSize = 2 * ChartEnums::DataUnit::Mb;
   bool hasHeader = false;
   int skipRows = 0;
 

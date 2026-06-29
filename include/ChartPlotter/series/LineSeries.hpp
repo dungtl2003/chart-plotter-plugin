@@ -34,7 +34,7 @@ class LineSeries : public XYSeries {
 public:
   explicit LineSeries(QObject *parent = nullptr);
 
-  ChartEnums::SeriesType type() override;
+  ChartEnums::SeriesType type() const override;
   QColor legendColor() const override;
 
   QColor strokeColor() const;

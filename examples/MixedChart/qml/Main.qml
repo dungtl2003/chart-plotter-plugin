@@ -6,60 +6,57 @@ Window {
     width: 800
     height: 600
     visible: true
-    title: qsTr("Chart Plotter Example")
+    title: qsTr("Mixed Bar + Line Chart Example")
     color: "white"
 
     ChartView {
         id: chart
 
+        // Mixed chart: one Bar series (revenue) with several Line series (target,
+        // forecast) overlaid on a shared category x axis and numeric y axis.
+        // Only ONE bar series is allowed, but any number of line series can be
+        // mixed in. Declare the bar first so it renders behind the lines.
         DataSource {
             id: dataSrc
-            url: "file:///home/ilikeblue/personal/projects/chart-plotter-plugin/temp/trendrand.csv"
+            url: "file:///home/ilikeblue/personal/projects/chart-plotter-plugin/temp/mixed_data.csv"
             format: ChartEnums.DataFormat.Csv
             skipRows: 0
             hasHeader: true
         }
 
-        LineSeries {
+        BarSeries {
             source: dataSrc
             xColumn: 0
             yColumn: 1
-            name: "Alpha"
-            strokePattern: ChartEnums.StrokePattern.Dash
+            name: "Revenue"
+            color: "#bcd2ff"
         }
+
         LineSeries {
             source: dataSrc
             xColumn: 0
             yColumn: 2
-            name: "Beta"
-            strokeColor: "#000000"
+            name: "Target"
+            strokeColor: "#d4453f"
+            strokePattern: ChartEnums.StrokePattern.Dash
+            antialias: 2
         }
+
         LineSeries {
             source: dataSrc
             xColumn: 0
             yColumn: 3
-            name: "Gamma"
-            strokeColor: "#9a3d48"
-            strokePattern: ChartEnums.StrokePattern.Dot
-        }
-        LineSeries {
-            source: dataSrc
-            xColumn: 0
-            yColumn: 4
-            name: "Delta"
-            strokeColor: "#ea72b9"
-            markerColor: "#a55555"
+            name: "Forecast"
+            strokeColor: "#1f9d55"
+            markerColor: "#147a40"
             markerVisible: true
+            antialias: 2
         }
 
         anchors.fill: parent
-        name: "Trend Sample"
+        name: "Revenue vs Target & Forecast"
         title: chart.name
 
-        generalConfig {
-            antialiasing: 2
-            lineWidth: 3
-        }
         titleItem: ChartTitle {
             text: chart.title
         }

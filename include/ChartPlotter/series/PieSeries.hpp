@@ -19,7 +19,7 @@ public:
   QString value() const;
   void setValue(const QString &newValue);
 
-  ChartEnums::SeriesType type() override;
+  ChartEnums::SeriesType type() const override;
 
 signals:
   void labelChanged();

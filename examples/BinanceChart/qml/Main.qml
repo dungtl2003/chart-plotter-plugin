@@ -28,35 +28,10 @@ Window {
             id: dataSrc
             url: "wss://stream.binance.com:9443/ws/btcusdt@kline_1s"
             format: ChartEnums.DataFormat.BinanceBasicJson
-            totalColumns: 19
             columns: [
                 Column {
                     idx: 1 // E
                     type: ChartEnums.DataType.Date
-                },
-                Column {
-                    idx: 8 // o
-                    type: ChartEnums.DataType.Number
-                },
-                Column {
-                    idx: 9 // c
-                    type: ChartEnums.DataType.Number
-                },
-                Column {
-                    idx: 10 // h
-                    type: ChartEnums.DataType.Number
-                },
-                Column {
-                    idx: 11 // l
-                    type: ChartEnums.DataType.Number
-                },
-                Column {
-                    idx: 12 // v
-                    type: ChartEnums.DataType.Number
-                },
-                Column {
-                    idx: 16 // V
-                    type: ChartEnums.DataType.Number
                 }
             ]
         }

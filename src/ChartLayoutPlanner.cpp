@@ -117,7 +117,6 @@ void ChartLayoutPlanner::applyDefaultPolicies() {
   m_policies.reserve(5);
   m_policies.push_back(std::make_unique<SeriesNotEmptyPolicy>());
   m_policies.push_back(std::make_unique<XYAndPieMixNotAllowedPolicy>());
-  m_policies.push_back(std::make_unique<LineAndBarMixNotAllowedPolicy>());
   m_policies.push_back(std::make_unique<MultipleBarSeriesNotAllowedPolicy>());
   m_policies.push_back(std::make_unique<MultiplePieSeriesNotAllowedPolicy>());
 }

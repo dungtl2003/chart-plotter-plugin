@@ -6,7 +6,7 @@ Window {
     width: 800
     height: 600
     visible: true
-    title: qsTr("Chart Plotter Example")
+    title: qsTr("Bar Chart Example")
     color: "white"
 
     ChartView {
@@ -14,33 +14,31 @@ Window {
 
         DataSource {
             id: dataSrc
-            url: "file:///home/ilikeblue/personal/projects/chart-plotter-plugin/temp/large.csv"
+            url: "file:///home/ilikeblue/personal/projects/chart-plotter-plugin/temp/bars.csv"
             format: ChartEnums.DataFormat.Csv
             skipRows: 0
+            hasHeader: true
         }
 
-        LineSeries {
+        BarSeries {
             source: dataSrc
             xColumn: 0
             yColumn: 1
-            strokeColor: "#000000"
-            antialias: 2
+            name: "Revenue"
+            color: "#3d7eff"
         }
 
         anchors.fill: parent
-        name: "Trend Sample"
+        name: "Monthly Revenue"
         title: chart.name
-        legendPosition: ChartEnums.LegendPosition.Bottom
 
-        generalConfig {
-            lineWidth: 2
-        }
         titleItem: ChartTitle {
             text: chart.title
         }
         legendItem: Legend {
             model: chart.legendModel
         }
+        legendPosition: ChartEnums.LegendPosition.Bottom
     }
 
     ChartSettings {
@@ -48,9 +46,5 @@ Window {
         anchors.right: parent.right
         anchors.top: parent.top
         anchors.margins: 12
-    }
-
-    ChartTooltip {
-        chart: chart
     }
 }

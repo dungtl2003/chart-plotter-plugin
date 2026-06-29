@@ -26,6 +26,8 @@ class GeneralConfig : public QObject {
 
   Q_PROPERTY(
       float lineWidth READ lineWidth WRITE setLineWidth NOTIFY lineWidthChanged)
+  Q_PROPERTY(
+      float barWidth READ barWidth WRITE setBarWidth NOTIFY barWidthChanged)
   Q_PROPERTY(float antialiasing READ antialiasing WRITE setAntialiasing NOTIFY
                  antialiasingChanged)
   Q_PROPERTY(int xPreferredTickCount READ xPreferredTickCount WRITE
@@ -38,6 +40,7 @@ class GeneralConfig : public QObject {
 
 public:
   static constexpr float DEFAULT_LINE_WIDTH = 5.0;
+  static constexpr float DEFAULT_BAR_WIDTH = 12.0;
   static constexpr float DEFAULT_AA = 1.0;
   static constexpr int DEFAULT_X_PREFERRED_TICK_COUNT = 6;
   static constexpr int DEFAULT_Y_PREFFERED_TICK_COUNT = 6;
@@ -48,6 +51,9 @@ public:
 
   float lineWidth() const;
   void setLineWidth(float newWidth);
+
+  float barWidth() const;
+  void setBarWidth(float newWidth);
 
   float antialiasing() const;
   void setAntialiasing(float a);
@@ -66,6 +72,7 @@ public:
 
 signals:
   void lineWidthChanged();
+  void barWidthChanged();
   void antialiasingChanged();
   void xPreferredTickCountChanged();
   void yPreferredTickCountChanged();
@@ -74,6 +81,7 @@ signals:
 
 private:
   float m_lineWidth = DEFAULT_LINE_WIDTH;
+  float m_barWidth = DEFAULT_BAR_WIDTH;
   float m_antialiasing = DEFAULT_AA;
   int m_xPreferredTickCount = DEFAULT_X_PREFERRED_TICK_COUNT;
   int m_yPreferredTickCount = DEFAULT_Y_PREFFERED_TICK_COUNT;
@@ -137,7 +145,7 @@ public:
 
   QVariantList seriesList() const;
 
-  Q_INVOKABLE void applySettings(float globalStrokeWidth,
+  Q_INVOKABLE void applySettings(float globalStrokeWidth, float globalBarWidth,
                                  float globalAntialiasing,
                                  int xPreferredTickCount,
                                  int yPreferredTickCount, int fps);

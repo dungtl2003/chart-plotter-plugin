@@ -17,6 +17,7 @@ class AbstractSeries : public QObject {
   Q_PROPERTY(ChartPlotter::DataSource *source READ source WRITE setSource NOTIFY
                  sourceChanged)
   Q_PROPERTY(QString name READ name WRITE setName NOTIFY nameChanged)
+  Q_PROPERTY(ChartPlotter::ChartEnums::SeriesType seriesType READ type CONSTANT)
 
 public:
   explicit AbstractSeries(QObject *parent = nullptr);
@@ -27,7 +28,7 @@ public:
   AbstractSeries &operator=(AbstractSeries &&) = delete;
   virtual ~AbstractSeries() = default;
 
-  virtual ChartEnums::SeriesType type() = 0;
+  virtual ChartEnums::SeriesType type() const = 0;
   virtual QColor legendColor() const;
 
   QPointer<DataSource> source() const;

@@ -4,7 +4,7 @@ namespace ChartPlotter {
 
 LineSeries::LineSeries(QObject *parent) : XYSeries(parent) {}
 
-ChartEnums::SeriesType LineSeries::type() {
+ChartEnums::SeriesType LineSeries::type() const {
   return ChartEnums::SeriesType::Line;
 }
 

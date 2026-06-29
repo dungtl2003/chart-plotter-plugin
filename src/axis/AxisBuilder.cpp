@@ -35,23 +35,30 @@ AxisModel AxisBuilder::buildCategoryAxis(const CategoryAxis &categories) {
   AxisModel model;
 
   const int n = categories.size();
-  // {0, n-1} keeps end categories flush with the frame; half-step padding
-  // would be {-0.5, n-0.5}.
-  model.range = AxisRange{.min = 0, .max = static_cast<double>(n - 1)};
+  // Bar/category axes render in BetweenTicks mode: the ticks are the band
+  // *boundaries* at {-0.5, 0.5, ..., n-0.5} and each category label is centered
+  // in the gap between two boundaries. Category i is centered on integer i, so a
+  // bar (or point) at i sits in the middle of its band instead of on a tick.
+  model.range = AxisRange{.min = -0.5, .max = static_cast<double>(n) - 0.5};
 
-  model.ticks.reserve(n);
+  model.ticks.reserve(n + 1);
   for (int i = 0; i < n; ++i) {
-    model.ticks.push_back({static_cast<double>(i), categories.labelAt(i)});
+    // Boundary i carries the label for the band to its right (category i).
+    model.ticks.push_back({static_cast<double>(i) - 0.5, categories.labelAt(i)});
   }
+  // Closing boundary — position only, its label is never used.
+  model.ticks.push_back({static_cast<double>(n) - 0.5, QString()});
 
   return model;
 }
 
 std::unique_ptr<AxisRenderData>
 AxisBuilder::toRenderData(const AxisModel &model, ChartEnums::AxisPosition pos,
-                          double baseline, const AxisRange &range) {
+                          double baseline, const AxisRange &range,
+                          ChartEnums::TickMode tickMode) {
   auto data = std::make_unique<AxisRenderData>();
   data->pos = pos;
+  data->tickMode = tickMode;
 
   const bool vertical = pos == ChartEnums::AxisPosition::Left ||
                         pos == ChartEnums::AxisPosition::Right;

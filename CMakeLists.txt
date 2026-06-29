@@ -98,6 +98,7 @@ set(CHARTPLOTTER_QMLS
     qml/ChartPlotter/ChartTitle.qml
     qml/ChartPlotter/ChartSettings.qml
     qml/ChartPlotter/ChartZoomButton.qml
+    qml/ChartPlotter/ChartTooltip.qml
 )
 
 set(CHARTPLOTTER_HEADERS
@@ -131,6 +132,7 @@ set(CHARTPLOTTER_HEADERS
 
     include/ChartPlotter/data/RenderData.hpp
     include/ChartPlotter/data/LineRenderData.hpp
+    include/ChartPlotter/data/BarRenderData.hpp
     include/ChartPlotter/data/AxisRenderData.hpp
     include/ChartPlotter/data/DataSource.hpp
     include/ChartPlotter/data/Column.hpp
@@ -150,8 +152,10 @@ set(CHARTPLOTTER_HEADERS
 
     include/ChartPlotter/data/parser/AbstractDataParser.hpp
     include/ChartPlotter/data/parser/CsvDataParser.hpp
+    include/ChartPlotter/data/parser/FastCsvDataParser.hpp
     include/ChartPlotter/data/parser/BinanceBasicJsonDataParser.hpp
     include/ChartPlotter/data/parser/DataParserFactory.hpp
+    include/ChartPlotter/data/CsvRowBatch.hpp
 
     include/ChartPlotter/axis/Axis.hpp
     include/ChartPlotter/axis/AxisBuilder.hpp
@@ -168,6 +172,8 @@ set(CHARTPLOTTER_HEADERS
     include/ChartPlotter/downsample/DataDownsampler.hpp
     include/ChartPlotter/downsample/LargestTriangleThreeBuckets.hpp
     include/ChartPlotter/downsample/HybridDownsampler.hpp
+    include/ChartPlotter/downsample/StationaryMinMaxDownsampler.hpp
+    include/ChartPlotter/downsample/MinMaxLodPyramid.hpp
 
     include/ChartPlotter/types/ChartEnums.hpp
     include/ChartPlotter/types/DataRange.hpp
@@ -217,6 +223,7 @@ set(CHARTPLOTTER_SOURCES
 
     src/data/parser/AbstractDataParser.cpp
     src/data/parser/CsvDataParser.cpp
+    src/data/parser/FastCsvDataParser.cpp
     src/data/parser/BinanceBasicJsonDataParser.cpp
     src/data/parser/DataParserFactory.cpp
 
@@ -235,6 +242,8 @@ set(CHARTPLOTTER_SOURCES
 
     src/downsample/LargestTriangleThreeBuckets.cpp
     src/downsample/HybridDownsampler.cpp
+    src/downsample/StationaryMinMaxDownsampler.cpp
+    src/downsample/MinMaxLodPyramid.cpp
 )
 
 set(CHARTPLOTTER_SHADERS
@@ -242,6 +251,8 @@ set(CHARTPLOTTER_SHADERS
     shaders/line/stroke.frag
     shaders/line/marker.vert
     shaders/line/marker.frag
+    shaders/bar/bar.vert
+    shaders/bar/bar.frag
     shaders/circle/circle.vert
     shaders/circle/circle.frag
     shaders/circle/circle-sdf.vert
@@ -331,8 +342,12 @@ if(CMAKE_PROJECT_NAME STREQUAL PROJECT_NAME)
     
     if(BUILD_EXAMPLES)
         add_subdirectory(examples/BasicChart)
+        add_subdirectory(examples/BarChart)
+        add_subdirectory(examples/NumericBarChart)
+        add_subdirectory(examples/MixedChart)
         add_subdirectory(examples/BinanceChart)
         add_subdirectory(examples/LargeDatasetChart)
+        add_subdirectory(examples/VeryLargeDatasetChart)
         add_subdirectory(examples/RealTimeChart)
         add_subdirectory(examples/CategoryLineChart)
         add_subdirectory(examples/DateTimeLineChart)

@@ -24,6 +24,8 @@ void PieSeries::setValue(const QString &newValue) {
   emit valueChanged();
 }
 
-ChartEnums::SeriesType PieSeries::type() { return ChartEnums::SeriesType::Pie; }
+ChartEnums::SeriesType PieSeries::type() const {
+  return ChartEnums::SeriesType::Pie;
+}
 
 } // namespace ChartPlotter

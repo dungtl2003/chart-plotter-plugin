@@ -23,6 +23,10 @@ public:
 
   static constexpr float LINE_STROKE_WIDTH_MIN = 1;
   static constexpr float LINE_STROKE_WIDTH_MAX = 10;
+  // Bars auto-size to their band: each bar fills this fraction of its slot, never
+  // drawn thinner than the floor (so dense charts stay visible).
+  static constexpr float BAR_BAND_FILL = 0.8;
+  static constexpr float BAR_MIN_PIXEL_WIDTH = 1;
   static constexpr float LINE_AA_MIN = 0;
   static constexpr float LINE_AA_MAX = 4;
   static constexpr double EPSILON = 1e-6;

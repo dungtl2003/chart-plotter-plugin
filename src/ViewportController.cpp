@@ -10,13 +10,23 @@ inline const float zoomFactor = 0.9;
 
 ViewportController::ViewportController(QObject *parent) : QObject(parent) {}
 
+DataRange ViewportController::maxBounds() const {
+  if (!m_useNiceBounds) {
+    return m_dataRange;
+  }
+  return RenderMath::expandToNiceBounds(m_dataRange, m_targetTickCount).range;
+}
+
+void ViewportController::setUseNiceBounds(bool useNiceBounds) {
+  m_useNiceBounds = useNiceBounds;
+}
+
 void ViewportController::setRange(DataRange newRange) {
   const double oldMax = m_dataRange.valid ? m_dataRange.max : newRange.max;
   m_dataRange = newRange;
 
   if (m_isAutoScaled || !m_visibleDataRange.valid) {
-    m_visibleDataRange =
-        RenderMath::expandToNiceBounds(m_dataRange, m_targetTickCount).range;
+    m_visibleDataRange = maxBounds();
     return;
   }
 
@@ -41,8 +51,7 @@ void ViewportController::setRange(DataRange newRange) {
 
 void ViewportController::resetZoom() {
   m_isAutoScaled = true;
-  m_visibleDataRange =
-      RenderMath::expandToNiceBounds(m_dataRange, m_targetTickCount).range;
+  m_visibleDataRange = maxBounds();
 }
 
 const DataRange &ViewportController::getVisibleRange() const {
@@ -60,8 +69,7 @@ void ViewportController::zoom(QRectF viewport, QPointF mousePos, int steps) {
   const double factor = std::pow(0.9, steps);
   const double currentRange = m_visibleDataRange.max - m_visibleDataRange.min;
   const double newRange = currentRange * factor;
-  const DataRange maxAllowedBounds =
-      RenderMath::expandToNiceBounds(m_dataRange, m_targetTickCount).range;
+  const DataRange maxAllowedBounds = maxBounds();
   const double maxAllowedWidth = maxAllowedBounds.max - maxAllowedBounds.min;
   const bool isTrackingLiveEdge =
       (m_visibleDataRange.max >= m_dataRange.max - ChartConstants::EPSILON);
@@ -136,8 +144,7 @@ void ViewportController::pan(QRectF viewport, double deltaXPixels) {
 
   const double currentRange = m_visibleDataRange.max - m_visibleDataRange.min;
   const double dataDelta = (deltaXPixels / viewport.width()) * currentRange;
-  const DataRange maxAllowedBounds =
-      RenderMath::expandToNiceBounds(m_dataRange, m_targetTickCount).range;
+  const DataRange maxAllowedBounds = maxBounds();
 
   double newMin = m_visibleDataRange.min - dataDelta;
   double newMax = m_visibleDataRange.max - dataDelta;

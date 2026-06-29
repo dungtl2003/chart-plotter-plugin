@@ -49,6 +49,14 @@ public:
   enum class StrokePattern { Solid, Dash, Dot };
   Q_ENUM(StrokePattern)
 
+  // How an over-dense line series is reduced to ~screen resolution.
+  // - MinMax: per-column min/max envelope (preserves every spike, reads as a
+  // band).
+  // - Lttb: largest-triangle-three-buckets (a single clean line through
+  // real points).
+  enum class DownsampleMode { MinMax, Lttb };
+  Q_ENUM(DownsampleMode)
+
   enum AxisPosition {
     Left = 0x01,
     Right = 0x02,

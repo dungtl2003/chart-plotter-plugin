@@ -24,7 +24,7 @@ private:
   loadSeriesConfig(LineRenderData *data, const AbstractSeries &series,
                    const SeriesBuildContext &context) const;
   std::pair<QVector<QPointF>::const_iterator, QVector<QPointF>::const_iterator>
-  calculateBound(const QVector<QPointF> points,
+  calculateBound(const QVector<QPointF> &points,
                  const SeriesBuildContext &context) const;
   std::expected<void, QString>
   validateTyAndColIndex(const ResolvedSeriesData &resolved,
