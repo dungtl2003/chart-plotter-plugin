@@ -35,6 +35,11 @@ struct DataSnapshot {
   qint64 rowCount = 0;
   qint64 columnCount = 0;
   qint64 version = 0;
+  // Absolute id of the first live row (= number of rows evicted from the front
+  // by the max-rows cap). Lets consumers keep stable, append-only row ids even
+  // though the physical window slides. `valueAt(row)` indexes the LIVE window
+  // [0, rowCount); add `firstRowId` to get the absolute id.
+  qint64 firstRowId = 0;
 
   QString toString() const;
   ChartEnums::DataType columnType(qint64 idx) const;
@@ -51,7 +56,16 @@ struct MutableDataColumn {
   QHash<QString, double> stringToId;
   QVector<QString> idToString;
 
+  // Cached date-parse strategy for this column, decided from the first value:
+  // 0 = undetermined, 1 = fast hand-rolled UTC-ISO parser, 2 = QDateTime ISO
+  // parse, 3 = generic QVariant parse (slow backstop). Only meaningful when
+  // type == Date.
+  int dateParseMode = 0;
+
   void appendValue(double value);
+  // Bulk append `n` values, filling chunks with memcpy-sized runs instead of
+  // one push_back per value. Hot path for file ingest.
+  void appendValues(const double *data, qint64 n);
   qint64 size() const;
   QString toString() const;
 };
@@ -72,9 +86,17 @@ public:
 
   void appendRow(const QVector<double> &rowValues);
   void appendRows(const QVector<QVector<double>> &rows);
+  // Column-major bulk append: cols[c] holds `n` values for column c. Locks once
+  // and appends each column in bulk. Hot path for file ingest.
+  void appendColumnsBulk(const QVector<QVector<double>> &cols, qint64 n);
 
   qint64 rowCount() const;
   qint64 columnCount() const;
+
+  // Cap the number of rows kept in memory. When exceeded, whole front chunks are
+  // evicted (oldest rows dropped permanently). <= 0 means unlimited. Safe to call
+  // from any thread; trims immediately.
+  void setMaxRows(qint64 maxRows);
 
   bool hasColumn(const QString &name) const;
   std::optional<std::reference_wrapper<MutableDataColumn>>
@@ -96,7 +118,9 @@ private:
   QHash<QString, qint64> m_columnIndex;
 
   quint64 m_epochId = 0;
-  qint64 m_rowCount = 0;
+  qint64 m_rowCount = 0; // live rows currently in memory
+  qint64 m_firstRowId = 0; // absolute id of live row 0 (rows evicted so far)
+  qint64 m_maxRows = -1;   // row cap; <= 0 means unlimited
   bool m_isValid = true;
   qint64 m_version = 0;
 
@@ -104,6 +128,8 @@ private:
 
   void rebuildColumnIndex();
   void normalizeColumnSizes();
+  // Evict whole front chunks while over the cap. Caller must hold the mutex.
+  void trimToCapLocked();
 };
 
 } // namespace ChartPlotter

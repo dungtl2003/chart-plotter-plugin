@@ -1,5 +1,7 @@
 #include "ChartPlotter/data/DataBuffer.hpp"
 
+#include <cstring>
+
 namespace ChartPlotter {
 
 DataChunk::DataChunk() { values.reserve(CHUNK_SIZE); }
@@ -56,6 +58,23 @@ void MutableDataColumn::appendValue(double value) {
   chunks.back()->values.push_back(value);
 }
 
+void MutableDataColumn::appendValues(const double *data, qint64 n) {
+  qint64 i = 0;
+  while (i < n) {
+    if (chunks.empty() ||
+        chunks.back()->values.size() == DataChunk::CHUNK_SIZE) {
+      chunks.push_back(std::make_shared<DataChunk>());
+    }
+    QVector<double> &vals = chunks.back()->values;
+    const qint64 oldSize = vals.size();
+    const qint64 take =
+        std::min<qint64>(DataChunk::CHUNK_SIZE - oldSize, n - i);
+    vals.resize(oldSize + take);
+    std::memcpy(vals.data() + oldSize, data + i, take * sizeof(double));
+    i += take;
+  }
+}
+
 qint64 MutableDataColumn::size() const {
   if (chunks.empty()) {
     return 0;
@@ -81,6 +100,7 @@ void DataBuffer::clear() {
   m_columns.clear();
   m_columnIndex.clear();
   m_rowCount = 0;
+  m_firstRowId = 0;
 
   m_epochId = QRandomGenerator::global()->generate64();
   ++m_version;
@@ -142,6 +162,59 @@ void DataBuffer::appendRows(const QVector<QVector<double>> &rows) {
   }
 
   ++m_version;
+}
+
+void DataBuffer::appendColumnsBulk(const QVector<QVector<double>> &cols,
+                                   qint64 n) {
+  std::lock_guard<std::mutex> locker(m_snapshotMutex);
+
+  if (m_columns.isEmpty() || n <= 0) {
+    return;
+  }
+
+  for (qint64 c = 0; c < m_columns.size(); ++c) {
+    if (c < cols.size()) {
+      m_columns[c].appendValues(cols.at(c).constData(), n);
+    } else {
+      // Missing column data: pad with NaN to keep columns rectangular.
+      for (qint64 r = 0; r < n; ++r) {
+        m_columns[c].appendValue(std::numeric_limits<double>::quiet_NaN());
+      }
+    }
+  }
+
+  m_rowCount += n;
+  trimToCapLocked();
+  ++m_version;
+}
+
+void DataBuffer::setMaxRows(qint64 maxRows) {
+  std::lock_guard<std::mutex> locker(m_snapshotMutex);
+  m_maxRows = maxRows;
+  trimToCapLocked();
+  ++m_version;
+}
+
+void DataBuffer::trimToCapLocked() {
+  if (m_maxRows <= 0 || m_columns.isEmpty()) {
+    return;
+  }
+
+  // Evict whole front chunks (the oldest rows) while we are over the cap and a
+  // full, droppable front chunk exists. Front chunks are always full CHUNK_SIZE
+  // (only the last chunk is partial), so dropping them keeps every remaining
+  // chunk CHUNK_SIZE-aligned and `valueAt(liveRow)` correct. The cap is honoured
+  // to within one chunk.
+  const std::vector<std::shared_ptr<DataChunk>> &probe = m_columns[0].chunks;
+  while (m_rowCount > m_maxRows && probe.size() > 1) {
+    for (MutableDataColumn &col : m_columns) {
+      if (!col.chunks.empty()) {
+        col.chunks.erase(col.chunks.begin());
+      }
+    }
+    m_firstRowId += DataChunk::CHUNK_SIZE;
+    m_rowCount -= DataChunk::CHUNK_SIZE;
+  }
 }
 
 qint64 DataBuffer::rowCount() const { return m_rowCount; }
@@ -261,6 +334,7 @@ DataSnapshot DataBuffer::snapshot() {
   DataSnapshot snap;
   snap.epochId = m_epochId;
   snap.rowCount = m_rowCount;
+  snap.firstRowId = m_firstRowId;
   snap.columnCount = m_columns.size();
   snap.columnIndex = m_columnIndex;
   snap.version = ++m_version;

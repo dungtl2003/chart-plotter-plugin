@@ -173,7 +173,7 @@ set(CHARTPLOTTER_HEADERS
     include/ChartPlotter/downsample/LargestTriangleThreeBuckets.hpp
     include/ChartPlotter/downsample/HybridDownsampler.hpp
     include/ChartPlotter/downsample/StationaryMinMaxDownsampler.hpp
-    include/ChartPlotter/downsample/MinMaxLodPyramid.hpp
+    include/ChartPlotter/downsample/LodPyramid.hpp
 
     include/ChartPlotter/types/ChartEnums.hpp
     include/ChartPlotter/types/DataRange.hpp
@@ -243,7 +243,7 @@ set(CHARTPLOTTER_SOURCES
     src/downsample/LargestTriangleThreeBuckets.cpp
     src/downsample/HybridDownsampler.cpp
     src/downsample/StationaryMinMaxDownsampler.cpp
-    src/downsample/MinMaxLodPyramid.cpp
+    src/downsample/LodPyramid.cpp
 )
 
 set(CHARTPLOTTER_SHADERS

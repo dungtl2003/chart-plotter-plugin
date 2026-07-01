@@ -1,6 +1,6 @@
 #include "ChartPlotter/data/parser/DataParserFactory.hpp"
 #include "ChartPlotter/data/parser/BinanceBasicJsonDataParser.hpp"
-#include "ChartPlotter/data/parser/CsvDataParser.hpp"
+#include "ChartPlotter/data/parser/FastCsvDataParser.hpp"
 
 namespace ChartPlotter {
 
@@ -9,7 +9,7 @@ DataParserFactory::create(const ChartEnums::DataFormat &format,
                           QObject *parent) {
   switch (format) {
   case ChartEnums::DataFormat::Csv:
-    return new CsvDataParser(parent);
+    return new FastCsvDataParser(parent);
   case ChartEnums::DataFormat::BinanceBasicJson:
     return new BinanceBasicJsonDataParser(parent);
   default:

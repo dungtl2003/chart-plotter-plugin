@@ -68,7 +68,25 @@ void ViewportController::zoom(QRectF viewport, QPointF mousePos, int steps) {
 
   const double factor = std::pow(0.9, steps);
   const double currentRange = m_visibleDataRange.max - m_visibleDataRange.min;
-  const double newRange = currentRange * factor;
+  double newRange = currentRange * factor;
+
+  // Floor the window so the user cannot zoom in past the dataset's meaningful
+  // resolution. Without this the range collapses toward zero, which makes the
+  // axis emit many ticks with the same rounded label and drives the tick step
+  // to zero (an unbounded loop that crashes). The floor is dataset-relative: a
+  // fraction of the full span, but never below a fraction of the values'
+  // magnitude (needed for large-magnitude axes like epoch-ms dates).
+  const double dataSpan = m_dataRange.max - m_dataRange.min;
+  const double magnitude =
+      std::max(std::abs(m_dataRange.min), std::abs(m_dataRange.max));
+  const double minVisibleWidth =
+      std::max(dataSpan * ChartConstants::MIN_ZOOM_SPAN_FRACTION,
+               magnitude * ChartConstants::MIN_ZOOM_MAGNITUDE_FRACTION);
+  if (steps > 0 && minVisibleWidth > 0.0) {
+    // steps > 0 is zoom-in (factor < 1, window shrinking).
+    newRange = std::max(newRange, minVisibleWidth);
+  }
+
   const DataRange maxAllowedBounds = maxBounds();
   const double maxAllowedWidth = maxAllowedBounds.max - maxAllowedBounds.min;
   const bool isTrackingLiveEdge =
@@ -77,23 +95,6 @@ void ViewportController::zoom(QRectF viewport, QPointF mousePos, int steps) {
 
   double t;
   double anchor;
-  // if (isTrackingLiveEdge) {
-  //   // We are at the live edge. Force the anchor to the right side.
-  //   t = 1.0;
-  //   anchor = m_visibleDataRange.max;
-  // } else {
-  //   // We are in the past. Anchor to the mouse cursor.
-  //   t = std::clamp(mousePos.x() / viewport.width(), 0.0, 1.0);
-  //   // nicer UI
-  //   if (t <= 0.2) {
-  //     t = 0;
-  //   }
-  //   if (t >= 0.8) {
-  //     t = 1;
-  //   }
-  //
-  //   anchor = m_visibleDataRange.min + t * currentRange;
-  // }
   t = std::clamp(mousePos.x() / viewport.width(), 0.0, 1.0);
   // nicer UI
   if (t <= 0.2) {

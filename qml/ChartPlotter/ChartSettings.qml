@@ -36,7 +36,11 @@ Button {
         gXTicks.value = chart.generalConfig.xPreferredTickCount;
         gYTicks.value = chart.generalConfig.yPreferredTickCount;
         gFps.value = chart.generalConfig.fps;
-        gDownsample.currentIndex = chart.generalConfig.downsampleMode;
+        // <= 0 means unlimited: leave the limit unchecked and the box at its
+        // floor; checking it switches to a finite cap.
+        const cap = chart.generalConfig.maxCacheRows;
+        gLimitRows.checked = cap > 0;
+        gMaxRows.value = cap > 0 ? cap : gMaxRows.from;
 
         lines.clear();
         const list = chart.seriesList;
@@ -97,8 +101,10 @@ Button {
                 s.strokePattern = d.pattern;
             }
         }
-        // global + one rebuild
-        chart.applySettings(gWidth.value, gAa.value, gXTicks.value, gYTicks.value, gFps.value, gDownsample.currentIndex);
+        // global + one rebuild. Unchecked "limit" => 0 (unlimited). The downsample
+        // mode is no longer user-editable here, so pass through its current value.
+        const maxRows = gLimitRows.checked ? gMaxRows.value : 0;
+        chart.applySettings(gWidth.value, gAa.value, gXTicks.value, gYTicks.value, gFps.value, chart.generalConfig.downsampleMode, maxRows);
     }
 
     component SliderRow: RowLayout {
@@ -153,12 +159,26 @@ Button {
                     anchors.fill: parent
                     spacing: 6
 
-                    SliderRow {
-                        id: gFps
-                        label: "FPS"
-                        from: ChartConstants.FPS_MIN
-                        to: ChartConstants.FPS_MAX
-                        stepSize: 1
+                    RowLayout {
+                        spacing: 10
+                        Label {
+                            text: "FPS"
+                            Layout.preferredWidth: 95
+                        }
+                        SpinBox {
+                            id: gFps
+                            Layout.fillWidth: true
+                            editable: true
+                            from: ChartConstants.FPS_MIN
+                            to: ChartConstants.FPS_MAX
+                            stepSize: 1
+                            // Only accept integers within [FPS_MIN, FPS_MAX]; the
+                            // SpinBox itself clamps out-of-range typed values.
+                            validator: IntValidator {
+                                bottom: gFps.from
+                                top: gFps.to
+                            }
+                        }
                     }
                     SliderRow {
                         id: gWidth
@@ -190,16 +210,42 @@ Button {
                     }
                     RowLayout {
                         spacing: 10
-                        Label {
-                            text: "Downsample"
-                            Layout.preferredWidth: 95
+                        CheckBox {
+                            id: gLimitRows
+                            text: "Limit cache rows"
+                            Layout.preferredWidth: 150
+                            // Unchecked = unlimited (oldest rows never evicted).
                         }
-                        ComboBox {
-                            id: gDownsample
+                        SpinBox {
+                            id: gMaxRows
                             Layout.fillWidth: true
-                            // index order matches ChartEnums.DownsampleMode (MinMax=0, Lttb=1)
-                            model: ["Min/Max envelope", "LTTB (clean line)"]
+                            enabled: gLimitRows.checked
+                            editable: true
+                            from: 100000
+                            to: 1000000000
+                            stepSize: 100000
+                            validator: IntValidator {
+                                bottom: gMaxRows.from
+                                top: gMaxRows.to
+                            }
+                            textFromValue: (value, locale) => Number(value).toLocaleString(locale, 'f', 0)
+                            valueFromText: (text, locale) => Number(text.replace(/[^0-9]/g, "")) || gMaxRows.from
                         }
+                    }
+                    // Cache-rows changes are not free: switching unlimited -> limited,
+                    // or moving the limit by a large amount, forces the cache to
+                    // evict (and the affected series to rebuild) in bulk. Mid-load
+                    // that shows up as a brief stall. Warn before the user does it.
+                    Label {
+                        Layout.fillWidth: true
+                        wrapMode: Text.WordWrap
+                        font.pixelSize: 12
+                        color: "#b06a00"
+                        text: "⚠ Change this carefully. Switching from unlimited to "
+                            + "limited, or moving the limit by a large amount while "
+                            + "data is streaming, can briefly stall the chart as the "
+                            + "cache re-evicts in bulk. Prefer setting it before "
+                            + "loading data."
                     }
                 }
             }

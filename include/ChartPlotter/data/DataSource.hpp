@@ -64,7 +64,7 @@ private:
   qint64 m_totalColumns = -1;
   QUrl m_url;
   ChartEnums::DataFormat m_format = ChartEnums::DataFormat::Unknown;
-  qint64 m_chunkSize = 100 * ChartEnums::DataUnit::Kb;
+  qint64 m_chunkSize = 2 * ChartEnums::DataUnit::Mb;
   std::unique_ptr<DataBuffer> m_buffer;
   QVector<Column *> m_columns;
   bool m_hasHeader;

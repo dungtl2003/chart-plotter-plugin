@@ -2,6 +2,9 @@
 #include "ChartPlotter/types/DataRange.hpp"
 #include "ChartPlotter/utils/DataRangeCalculator.hpp"
 
+#include <algorithm>
+#include <cmath>
+
 namespace ChartPlotter {
 
 SeriesResolveResult SeriesDataResolver::resolve(
@@ -118,14 +121,6 @@ ResolvedSeriesData SeriesDataResolver::resolveXYSeries(
             .arg(seriesIndex);
     return result;
   }
-
-  // if (!snapshots.contains(sourceId)) {
-  //   result.errorMessage =
-  //       QString("XY series %1 has no snapshot yet for sourceId %2")
-  //           .arg(seriesIndex)
-  //           .arg(sourceId);
-  //   return result;
-  // }
 
   // Special case: no data yet
   if (!snapshots.contains(sourceId)) {
@@ -476,8 +471,19 @@ void SeriesDataResolver::calculateAbsoluteBounds(
       cache.resolvedYRange = {};
     }
 
-    if (cache.processedRowCount < snapshot.rowCount &&
-        !boundsProcessedThisFrame.contains(key)) {
+    // `processedRowCount` is an ABSOLUTE, monotonic high-water row id (the same
+    // mark the rendering strategy maintains), not a live count. Convert it into
+    // a live index against the current window [firstRowId, firstRowId +
+    // rowCount) so we only scan the newly appended tail rows. When nothing has
+    // been evicted firstRowId == 0 and this collapses to the old `fromRow ==
+    // processedRowCount` behaviour.
+    const quint64 liveStart = static_cast<quint64>(snapshot.firstRowId);
+    const quint64 liveEnd = liveStart + static_cast<quint64>(snapshot.rowCount);
+    const quint64 absFrom = std::max(cache.processedRowCount, liveStart);
+
+    if (absFrom < liveEnd && !boundsProcessedThisFrame.contains(key)) {
+      const quint64 liveFrom = absFrom - liveStart;
+
       DataRange deltaX;
       DataRange deltaY;
 
@@ -488,12 +494,12 @@ void SeriesDataResolver::calculateAbsoluteBounds(
         deltaX = DataRange{.min = 0.0, .max = maxId, .valid = true};
       } else {
         deltaX = DataRangeCalculator::calculateColumnRange(
-            snapshot, resolved.xColumnIndex, cache.processedRowCount);
+            snapshot, resolved.xColumnIndex, liveFrom);
       }
 
       // Y Bounds
       deltaY = DataRangeCalculator::calculateColumnRange(
-          snapshot, resolved.yColumnIndex, cache.processedRowCount);
+          snapshot, resolved.yColumnIndex, liveFrom);
 
       cache.resolvedXRange =
           DataRangeCalculator::unionRange(cache.resolvedXRange, deltaX);
@@ -505,6 +511,26 @@ void SeriesDataResolver::calculateAbsoluteBounds(
       // CRITICAL: Do NOT update cache.processedRowCount here!
       // The rendering strategies still need to read these exact rows to extract
       // QPointFs.
+    }
+
+    // Sliding-window front eviction. The incrementally-unioned X range can only
+    // grow, so once old rows are dropped (firstRowId > 0) its `min` still
+    // carries the evicted prefix. Left unhandled this freezes the auto-scaled
+    // viewport at the full history while the live points slide off to the right
+    // and vanish — exactly the failure seen when switching maxCacheRows from
+    // unlimited to limited mid-stream. x is non-decreasing in the streaming/cap
+    // case (the same assumption the strategy's eviction and slicing rely on),
+    // so the live lower edge is the first live row's x; raise `min` to it so
+    // the absolute range tracks the live window.
+    if (snapshot.firstRowId > 0 && cache.resolvedXRange.valid &&
+        resolved.xColumnType != ChartEnums::DataType::String) {
+      for (qint64 row = 0; row < snapshot.rowCount; ++row) {
+        const double v = snapshot.valueAt(resolved.xColumnIndex, row);
+        if (!std::isnan(v) && std::isfinite(v)) {
+          cache.resolvedXRange.min = std::max(cache.resolvedXRange.min, v);
+          break;
+        }
+      }
     }
 
     resolved.absoluteXRange = cache.resolvedXRange;

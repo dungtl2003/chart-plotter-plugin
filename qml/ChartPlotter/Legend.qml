@@ -1,6 +1,7 @@
 pragma ComponentBehavior: Bound
 
 import QtQuick
+import QtQuick.Controls
 import QtQuick.Layouts
 
 Item {
@@ -9,30 +10,54 @@ Item {
     property var model: null
     property bool horizontal: false
 
-    implicitWidth: card.width
-    implicitHeight: card.height
+    // Natural (unclipped) content size. relayout() reserves space along the
+    // legend's *main* axis from these — the width for a Left/Right legend, the
+    // height for a Top/Bottom one — and caps the cross axis to what's available.
+    // When the series list overflows that cross axis, the Flickable scrolls.
+    readonly property real pad: 14
+    implicitWidth: layout.implicitWidth + pad * 2
+    implicitHeight: layout.implicitHeight + pad * 2
 
     Rectangle {
         id: card
-        anchors.centerIn: parent
-
-        width: layout.implicitWidth + 28
-        height: layout.implicitHeight + 20
-
+        anchors.fill: parent
         radius: 12
         color: "#ffffff"
-        border.width: 0
-        // border.color: "#e6e6ec"
-        // border.width: 1
+    }
+
+    Flickable {
+        id: flick
+        anchors.fill: parent
+        anchors.margins: root.pad
+        clip: true
+
+        // Scroll along the axis the legend grows on: horizontal legends (Top/
+        // Bottom) flick sideways, vertical legends (Left/Right) flick up/down.
+        // Keep the content area at least the viewport size so a short legend
+        // doesn't become scrollable — it just gets centered (see layout.x/y).
+        flickableDirection: root.horizontal ? Flickable.HorizontalFlick : Flickable.VerticalFlick
+        contentWidth: root.horizontal ? Math.max(width, layout.implicitWidth) : width
+        contentHeight: root.horizontal ? height : Math.max(height, layout.implicitHeight)
+        boundsBehavior: Flickable.StopAtBounds
 
         GridLayout {
             id: layout
-            anchors.centerIn: parent
-
+            // Single row when horizontal (scrolls right), single column when
+            // vertical (scrolls down).
             flow: GridLayout.LeftToRight
             columns: root.horizontal ? Math.max(rep.count, 1) : 1
             rowSpacing: 6
             columnSpacing: 16
+
+            // Center the items in the viewport. On the scroll axis, clamp the
+            // offset to >= 0 so once the legend overflows it pins to the start
+            // and scrolls from the beginning instead of being pushed off.
+            x: root.horizontal
+               ? Math.max(0, (flick.width - implicitWidth) / 2)
+               : (flick.width - implicitWidth) / 2
+            y: root.horizontal
+               ? (flick.height - implicitHeight) / 2
+               : Math.max(0, (flick.height - implicitHeight) / 2)
 
             Repeater {
                 id: rep
@@ -84,6 +109,14 @@ Item {
                     }
                 }
             }
+        }
+
+        // Only the active scroll axis shows an indicator.
+        ScrollBar.vertical: ScrollBar {
+            policy: !root.horizontal && flick.contentHeight > flick.height ? ScrollBar.AsNeeded : ScrollBar.AlwaysOff
+        }
+        ScrollBar.horizontal: ScrollBar {
+            policy: root.horizontal && flick.contentWidth > flick.width ? ScrollBar.AsNeeded : ScrollBar.AlwaysOff
         }
     }
 }

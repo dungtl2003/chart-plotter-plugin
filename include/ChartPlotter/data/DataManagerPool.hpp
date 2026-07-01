@@ -24,6 +24,10 @@ public:
 
   const QHash<DataSource *, int> &sourceIds() const;
   QPointer<DataManager> createDataManager(const QPointer<DataSource> source);
+  // Global memory cap (rows) applied to every source's buffer. <= 0 = unlimited.
+  // Propagated to existing managers on their worker threads (queued) and to any
+  // managers created afterwards.
+  void setMaxRows(qint64 maxRows);
   void shutdownDataManagers();
   void shutdownDataManager(QPointer<DataManager> manager,
                            QPointer<QThread> thread);
@@ -44,6 +48,7 @@ private:
   QHash<DataSource *, int> m_sourceIds;
   QVector<DataManagerRuntime> m_dataManagers;
   int m_nextSourceId = 0;
+  qint64 m_maxRows = -1; // global row cap; <= 0 = unlimited
 
   float m_fps = 60;
   QTimer *m_fpsTimer = nullptr;

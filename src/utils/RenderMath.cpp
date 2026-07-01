@@ -97,9 +97,22 @@ RenderMath::expandToNiceBounds(const DataRange &rawRange, int targetTickCount) {
   double niceRange = niceNumber(rawDiff, false);
   double step = niceNumber(niceRange / (targetTickCount - 1), true);
 
+  // Guard a degenerate step: for an extremely small range, niceNumber can round
+  // to zero (or a denormal), and dividing by it below yields inf/nan ticks and
+  // an unbounded tick loop. Fall back to an even split of the (sanitized)
+  // range.
+  if (!std::isfinite(step) || step <= 0.0) {
+    step = rawDiff / (targetTickCount - 1);
+    if (!std::isfinite(step) || step <= 0.0) {
+      step = 1.0;
+    }
+  }
+
   DataRange paddedRange;
-  paddedRange.min = std::floor(rawRange.min / step) * step;
-  paddedRange.max = std::ceil(rawRange.max / step) * step;
+  // Use the sanitized min/max (rawRange may have been invalid/non-finite
+  // above).
+  paddedRange.min = std::floor(min / step) * step;
+  paddedRange.max = std::ceil(max / step) * step;
   paddedRange.valid = true;
 
   return NiceBoundsResult{.range = paddedRange, .step = step};

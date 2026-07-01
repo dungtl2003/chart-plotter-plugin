@@ -5,8 +5,6 @@
 #include <QFile>
 #include <QUrl>
 
-#include <atomic>
-
 namespace ChartPlotter {
 
 class FileDataReader : public AbstractDataReader {
@@ -32,7 +30,6 @@ private:
 
   bool m_running = false;
   bool m_configLoaded = false;
-  std::atomic_bool m_stopRequested = false;
 };
 
 } // namespace ChartPlotter

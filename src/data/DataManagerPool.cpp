@@ -30,6 +30,16 @@ const QHash<DataSource *, int> &DataManagerPool::sourceIds() const {
   return m_sourceIds;
 }
 
+void DataManagerPool::setMaxRows(qint64 maxRows) {
+  m_maxRows = maxRows;
+  for (const DataManagerRuntime &runtime : m_dataManagers) {
+    if (runtime.manager) {
+      QMetaObject::invokeMethod(runtime.manager, "setMaxRows",
+                                Qt::QueuedConnection, Q_ARG(qint64, maxRows));
+    }
+  }
+}
+
 QPointer<DataManager>
 DataManagerPool::createDataManager(const QPointer<DataSource> source) {
   const int id = m_nextSourceId++;
@@ -41,6 +51,9 @@ DataManagerPool::createDataManager(const QPointer<DataSource> source) {
   QPointer<DataManager> manager = new DataManager();
   manager->setDataReadConfig(std::move(source->exportConfig()));
   manager->setSourceId(id);
+  // Apply the current cap before the thread starts so start() configures the
+  // buffer with it (direct call is safe here — not yet on the worker thread).
+  manager->setMaxRows(m_maxRows);
   manager->moveToThread(thread);
 
   connect(thread, &QThread::started, manager, &DataManager::start);

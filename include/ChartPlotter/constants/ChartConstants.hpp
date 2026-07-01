@@ -30,6 +30,19 @@ public:
   static constexpr float LINE_AA_MIN = 0;
   static constexpr float LINE_AA_MAX = 4;
   static constexpr double EPSILON = 1e-6;
+  // Deepest zoom-in: the visible window may not shrink below this fraction of the
+  // full data span, nor (for large-magnitude values like epoch ms) below this
+  // fraction of the values' magnitude. Stops infinite zoom that collapses the
+  // axis into many identical-labelled ticks and divides the tick step to zero.
+  static constexpr double MIN_ZOOM_SPAN_FRACTION = 1e-4;
+  static constexpr double MIN_ZOOM_MAGNITUDE_FRACTION = 1e-9;
+  // Hard cap on generated ticks — a defensive guard against a degenerate
+  // (near-zero) step producing an unbounded tick loop.
+  static constexpr int MAX_AXIS_TICKS = 1000;
+  // Smallest usable plot area (pixels) on either axis. Below this the window has
+  // been shrunk so far that the plot rect goes zero/negative; rendering it would
+  // divide by a ~0 width and crash, so we skip the frame instead.
+  static constexpr double MIN_PLOT_SIZE = 4.0;
   static constexpr int TICK_COUNT_MAX = 20;
   static constexpr int TICK_COUNT_MIN = 2;
   static constexpr int FPS_MIN = 1;

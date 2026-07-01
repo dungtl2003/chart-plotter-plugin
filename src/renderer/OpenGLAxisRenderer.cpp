@@ -347,12 +347,36 @@ void OpenGLAxisRenderer::buildLabelVertices(const ChartRenderContext &context,
   const float outward = tickHalfLength + labelGap;
   const QVector<Tick> anchors = resolveTickAnchors(ticks);
 
+  const bool horizontal = axisData->pos == ChartEnums::AxisPosition::Bottom ||
+                          axisData->pos == ChartEnums::AxisPosition::Top;
+  // Greedy decimation: when there are many labels (e.g. 100+ categories) they
+  // would overlap into an unreadable smear. Keep a label only if it clears the
+  // last kept one along the axis. Two centered labels collide when their centers
+  // are closer than half their combined extent plus a little padding.
+  constexpr float labelPad = 6.0f;
+  bool hasKept = false;
+  float lastKeptCoord = 0.0f;
+  float lastKeptExtent = 0.0f;
+
   for (const auto &tick : anchors) {
     if (tick.label.isEmpty())
       continue;
 
     const LabelTexture lt = acquireLabelTexture(tick.label, f, dpr);
     const QVector2D &tp = tick.position;
+
+    const float coord = horizontal ? tp.x() : tp.y();
+    const float extent = horizontal ? lt.width : lt.height;
+    if (hasKept) {
+      const float needed = (lastKeptExtent + extent) * 0.5f + labelPad;
+      if (qAbs(coord - lastKeptCoord) < needed) {
+        continue; // would overlap the previous kept label — skip it
+      }
+    }
+    hasKept = true;
+    lastKeptCoord = coord;
+    lastKeptExtent = extent;
+
     QVector2D topLeft;
 
     switch (axisData->pos) {

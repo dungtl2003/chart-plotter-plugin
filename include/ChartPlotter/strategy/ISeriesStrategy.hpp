@@ -3,10 +3,11 @@
 #include "ChartPlotter/axis/CategoryAxis.hpp"
 #include "ChartPlotter/data/DataBuffer.hpp"
 #include "ChartPlotter/data/RenderData.hpp"
-#include "ChartPlotter/downsample/MinMaxLodPyramid.hpp"
+#include "ChartPlotter/downsample/LodPyramid.hpp"
 #include "ChartPlotter/series/AbstractSeries.hpp"
 #include "ChartPlotter/series/ResolvedSeriesData.hpp"
-#include "downsample/DataDownsampler.hpp"
+
+#include <deque>
 
 namespace ChartPlotter {
 
@@ -28,13 +29,16 @@ inline size_t qHash(const PointCacheKey &key, size_t seed = 0) {
 struct PointCacheValue {
   quint64 epochId = 0;
   quint64 processedRowCount = 0;
-  QVector<QPointF> points;
+  // deque (not QVector) so sliding-window front eviction frees whole front nodes
+  // in O(evicted) instead of memmoving the entire tail down on every batch.
+  std::deque<QPointF> points;
   DataRange resolvedXRange;
   DataRange resolvedYRange;
 
-  // Min/max LOD pyramid over `points`, kept in sync incrementally so zoom/pan is
-  // O(visible buckets) instead of O(visible points).
-  MinMaxLodPyramid lodPyramid;
+  // LOD pyramid over `points`, kept in sync incrementally so zoom/pan is
+  // O(visible buckets) instead of O(visible points). Serves both the min/max and
+  // LTTB queries.
+  LodPyramid lodPyramid;
 };
 
 struct SeriesBuildContext {
@@ -45,7 +49,6 @@ struct SeriesBuildContext {
   float globalAntialiasing = 1.0;
   ChartEnums::DownsampleMode downsampleMode = ChartEnums::DownsampleMode::Lttb;
   DataRange viewportXRange;
-  std::unique_ptr<DataDownsampler> dataDownsampler;
   qsizetype preferredTotalPoints = 200;
   bool shouldDownsample = true;
 

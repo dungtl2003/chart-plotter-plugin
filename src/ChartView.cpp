@@ -3,14 +3,57 @@
 #include "ChartPlotter/axis/AxisBuilder.hpp"
 #include "ChartPlotter/constants/ChartConstants.hpp"
 #include "ChartPlotter/data/RenderData.hpp"
-#include "ChartPlotter/downsample/HybridDownsampler.hpp"
-// #include "ChartPlotter/downsample/LargestTriangleThreeBuckets.hpp"
 #include "ChartPlotter/factory/SeriesComponentFactoryProvider.hpp"
 #include "ChartPlotter/node/ChartRenderNode.hpp"
 #include "ChartPlotter/utils/DataRangeCalculator.hpp"
 #include "ChartPlotter/utils/LoggerManager.hpp"
+#include "ChartPlotter/utils/RenderMath.hpp"
+
+#include <QDateTime>
+#include <QHoverEvent>
+
+#include <algorithm>
+#include <cmath>
 
 namespace ChartPlotter {
+
+namespace {
+// Format a numeric hover value as a plain decimal so large magnitudes
+// (millions, billions) read as actual digits instead of e-notation. Falls back
+// to scientific only when the value is extremely large or extremely small,
+// where fixed notation would be unwieldy. Renders ~6 significant figures and
+// trims trailing zeros so integers stay clean (1234567 -> "1234567").
+QString formatHoverNumber(double v) {
+  if (std::isnan(v) || std::isinf(v)) {
+    return QString::number(v);
+  }
+  if (v == 0.0) {
+    return QStringLiteral("0");
+  }
+
+  const double mag = std::abs(v);
+  if (mag >= 1e15 || mag < 1e-4) {
+    return QString::number(v, 'g', 6);
+  }
+
+  int decimals = 6;
+  if (mag >= 1.0) {
+    const int intDigits = static_cast<int>(std::floor(std::log10(mag))) + 1;
+    decimals = std::max(0, 6 - intDigits);
+  }
+
+  QString s = QString::number(v, 'f', decimals);
+  if (s.contains('.')) {
+    while (s.endsWith('0')) {
+      s.chop(1);
+    }
+    if (s.endsWith('.')) {
+      s.chop(1);
+    }
+  }
+  return s;
+}
+} // namespace
 
 GeneralConfig::GeneralConfig(QObject *parent) : QObject(parent) {}
 
@@ -74,9 +117,32 @@ void GeneralConfig::setFps(int fps) {
   emit fpsChanged();
 }
 
+ChartEnums::DownsampleMode GeneralConfig::downsampleMode() const {
+  return m_downsampleMode;
+}
+void GeneralConfig::setDownsampleMode(ChartEnums::DownsampleMode mode) {
+  if (m_downsampleMode == mode) {
+    return;
+  }
+
+  m_downsampleMode = mode;
+  emit downsampleModeChanged();
+}
+
+int GeneralConfig::maxCacheRows() const { return m_maxCacheRows; }
+void GeneralConfig::setMaxCacheRows(int maxRows) {
+  if (m_maxCacheRows == maxRows) {
+    return;
+  }
+
+  m_maxCacheRows = maxRows;
+  emit maxCacheRowsChanged();
+}
+
 ChartView::ChartView(QQuickItem *parent) : QQuickItem(parent) {
   setFlag(ItemHasContents, true);
   setAcceptedMouseButtons(Qt::LeftButton);
+  setAcceptHoverEvents(true);
 
   m_updateTimer = new QTimer(this);
   m_updateTimer->setSingleShot(true);
@@ -91,12 +157,6 @@ ChartView::ChartView(QQuickItem *parent) : QQuickItem(parent) {
   m_logger = LoggerManager::createInstanceLogger(m_name.toStdString());
   connect(m_dataManagerPool, &DataManagerPool::errorOccurred, this,
           &ChartView::onDataError, Qt::QueuedConnection);
-  // connect(
-  //     m_dataManagerPool, &DataManagerPool::snapshotReady, this,
-  //     [this](int id, const DataSnapshot &snapshot) {
-  //       onSnapshotReady(id, snapshot);
-  //     },
-  //     Qt::QueuedConnection);
   connect(
       m_dataManagerPool, &DataManagerPool::snapshotsReady, this,
       [this](const std::vector<std::pair<int, DataSnapshot>> &snapshots) {
@@ -108,6 +168,17 @@ ChartView::ChartView(QQuickItem *parent) : QQuickItem(parent) {
           [this](int, bool) {
             if (m_plan.valid && rebuildRenderPackage()) {
               scheduleUpdate();
+            }
+          });
+
+  // Apply the row cap set declaratively (generalConfig { maxCacheRows: N }),
+  // not just via applySettings()/the Apply button. Forward any change straight
+  // to the pool; managers created later in componentComplete() pick up the
+  // stored cap, and managers already running get it applied immediately.
+  connect(&m_generalConfig, &GeneralConfig::maxCacheRowsChanged, this,
+          [this]() {
+            if (m_dataManagerPool) {
+              m_dataManagerPool->setMaxRows(m_generalConfig.maxCacheRows());
             }
           });
 }
@@ -216,7 +287,8 @@ void ChartView::mousePressEvent(QMouseEvent *event) {
   m_isPanning = true;
   m_panLastMousePos = event->position();
   m_lockedYRange = m_plotContext.yRange;
-  grabMouse(); // Capture all mouse events
+  clearHoveredPoint(); // hide tooltip while dragging
+  grabMouse();         // Capture all mouse events
   event->accept();
 }
 
@@ -270,6 +342,109 @@ void ChartView::mouseReleaseEvent(QMouseEvent *event) {
   ungrabMouse(); // Release the mouse capture
   event->accept();
 }
+
+void ChartView::hoverMoveEvent(QHoverEvent *event) {
+  m_lastHoverPos = event->position();
+  m_hasHoverPos = true;
+  updateHoveredPoint(m_lastHoverPos);
+  QQuickItem::hoverMoveEvent(event);
+}
+
+void ChartView::hoverLeaveEvent(QHoverEvent *event) {
+  m_hasHoverPos = false;
+  clearHoveredPoint();
+  QQuickItem::hoverLeaveEvent(event);
+}
+
+QPointF ChartView::mapDataToScreen(double dataX, double dataY) const {
+  const QRectF &pa = m_plotContext.plotArea;
+  const AxisRange &xr = m_plotContext.xAxisRange;
+  const AxisRange &yr = m_plotContext.yAxisRange;
+
+  const double nx = RenderMath::normalize(dataX, xr.min, xr.max);
+  const double ny = RenderMath::normalize(dataY, yr.min, yr.max);
+
+  // Screen Y grows downward, so the data top maps to plotArea.top().
+  return QPointF(pa.left() + nx * pa.width(), pa.bottom() - ny * pa.height());
+}
+
+void ChartView::clearHoveredPoint() {
+  if (m_hoveredPoint.isEmpty()) {
+    return;
+  }
+  m_hoveredPoint.clear();
+  emit hoveredPointChanged();
+}
+
+void ChartView::updateHoveredPoint(const QPointF &pos) {
+  // Snap radius in pixels: hovering within this distance of a drawn point shows
+  // its tooltip; outside it the tooltip is hidden.
+  constexpr double kSnapRadiusPx = 24.0;
+
+  if (m_isPanning || !m_plotContext.plotArea.isValid() ||
+      !m_plotContext.plotArea.contains(pos) || m_hoverSeries.isEmpty()) {
+    clearHoveredPoint();
+    return;
+  }
+
+  double bestDistSq = kSnapRadiusPx * kSnapRadiusPx;
+  const HoverSeriesData *bestSeries = nullptr;
+  QPointF bestData;
+  QPointF bestScreen;
+
+  for (const HoverSeriesData &hs : m_hoverSeries) {
+    for (const QPointF &p : hs.points) {
+      const QPointF screen = mapDataToScreen(p.x(), p.y());
+      const double dx = screen.x() - pos.x();
+      const double dy = screen.y() - pos.y();
+      const double distSq = dx * dx + dy * dy;
+      if (distSq < bestDistSq) {
+        bestDistSq = distSq;
+        bestSeries = &hs;
+        bestData = p;
+        bestScreen = screen;
+      }
+    }
+  }
+
+  if (!bestSeries) {
+    clearHoveredPoint();
+    return;
+  }
+
+  // Label the x value: category label for a category axis, a formatted
+  // timestamp for a datetime axis (same format as the x ticks), otherwise the
+  // plain number.
+  QString xLabel;
+  if (m_hoverXIsCategory) {
+    const int id = static_cast<int>(std::llround(bestData.x()));
+    xLabel = (id >= 0 && id < m_hoverCategories.size())
+                 ? m_hoverCategories.at(id)
+                 : formatHoverNumber(bestData.x());
+  } else if (m_hoverXIsDate) {
+    xLabel = QDateTime::fromMSecsSinceEpoch(static_cast<qint64>(bestData.x()))
+                 .toString("MM/dd/yyyy hh:mm:ss");
+  } else {
+    xLabel = formatHoverNumber(bestData.x());
+  }
+  const QString yLabel = formatHoverNumber(bestData.y());
+
+  QVariantMap info;
+  info.insert("active", true);
+  info.insert("x", bestScreen.x());
+  info.insert("y", bestScreen.y());
+  info.insert("seriesName", bestSeries->name);
+  info.insert("color", bestSeries->color);
+  info.insert("xLabel", xLabel);
+  info.insert("yLabel", yLabel);
+  info.insert("xValue", bestData.x());
+  info.insert("yValue", bestData.y());
+
+  m_hoveredPoint = std::move(info);
+  emit hoveredPointChanged();
+}
+
+QVariantMap ChartView::hoveredPoint() const { return m_hoveredPoint; }
 
 void ChartView::onDataError(const QString &message) {
   m_logger->warn(message.toStdString());
@@ -337,8 +512,18 @@ QSGNode *ChartView::updatePaintNode(QSGNode *oldNode, UpdatePaintNodeData *) {
   const QRectF outer =
       m_plotOuterRect.isValid() ? m_plotOuterRect : boundingRect();
   const auto m = m_plan.plotMargins;
+  const QRectF plotArea = outer.adjusted(m.left, m.top, -m.right, -m.bottom);
+
+  // Window shrunk below a usable plot size: keep the last good plot context
+  // rather than push a zero/negative rect into the renderers (degenerate scale
+  // math crashes). The chart simply freezes until the window grows again.
+  if (plotArea.width() < ChartConstants::MIN_PLOT_SIZE ||
+      plotArea.height() < ChartConstants::MIN_PLOT_SIZE) {
+    return node;
+  }
+
   m_plotContext.itemRect = outer;
-  m_plotContext.plotArea = outer.adjusted(m.left, m.top, -m.right, -m.bottom);
+  m_plotContext.plotArea = plotArea;
   node->setPlotContext(m_plotContext);
 
   return node;
@@ -384,6 +569,61 @@ void ChartView::appendContent(QQmlListProperty<QObject> *property,
   }
 }
 
+void ChartView::addSeries(QObject *object) {
+  auto *series = qobject_cast<AbstractSeries *>(object);
+  if (!series || m_series.contains(series)) {
+    return;
+  }
+
+  m_content.push_back(object);
+  m_series.push_back(series);
+
+  // Keep m_strategies index-aligned with m_series (one entry per series, even
+  // if null), mirroring appendContent().
+  std::unique_ptr<ISeriesStrategy> strategy;
+  if (auto factory =
+          SeriesComponentFactoryProvider::getFactory(series->type())) {
+    strategy = factory->getStrategy();
+  } else {
+    m_logger->warn("ChartView::addSeries: unsupported chart type");
+  }
+  m_strategies.push_back(std::move(strategy));
+
+  // Before componentComplete these are cheap no-ops / get redone there; after
+  // it they fold the new series into the plan, legend and next render.
+  rebuildLegendModel();
+  replan();
+  emit seriesListChanged();
+  if (isComponentComplete()) {
+    scheduleUpdate();
+  }
+}
+
+void ChartView::removeSeries(QObject *object) {
+  auto *series = qobject_cast<AbstractSeries *>(object);
+  if (!series) {
+    return;
+  }
+
+  const qsizetype idx = m_series.indexOf(series);
+  if (idx < 0) {
+    return;
+  }
+
+  m_series.remove(idx);
+  if (idx < static_cast<qsizetype>(m_strategies.size())) {
+    m_strategies.erase(m_strategies.begin() + idx);
+  }
+  m_content.removeAll(object);
+
+  rebuildLegendModel();
+  replan();
+  emit seriesListChanged();
+  if (isComponentComplete()) {
+    scheduleUpdate();
+  }
+}
+
 // TODO: handle xy series for now
 bool ChartView::rebuildRenderPackage() {
   assert(m_plan.valid && m_dataManagerPool);
@@ -403,8 +643,27 @@ bool ChartView::rebuildRenderPackage() {
     m_viewportController->setTargetTickCount(
         m_generalConfig.xPreferredTickCount());
 
-    if (m_resolvedSeries.absoluteXRange.valid) {
-      m_viewportController->setRange(m_resolvedSeries.absoluteXRange);
+    // Category axes operate in "band space": each category id i owns the band
+    // [i-0.5, i+0.5], so the full extent is [-0.5, n-0.5]. We drive the
+    // viewport with that exact range (no nice-bounds rounding) so zooming
+    // clamps/filters the X axis ticks and the bars against the *same* range.
+    // Otherwise the axis keeps showing every tick while the bars shrink to the
+    // zoom window.
+    const bool xIsCategory =
+        m_resolvedSeries.sharedXColumnType == ChartEnums::DataType::String;
+    m_viewportController->setUseNiceBounds(!xIsCategory);
+
+    DataRange viewportRange = m_resolvedSeries.absoluteXRange;
+    if (xIsCategory) {
+      const int n = m_resolvedSeries.sharedXCategories.size();
+      if (n > 0) {
+        viewportRange = DataRange{
+            .min = -0.5, .max = static_cast<double>(n) - 0.5, .valid = true};
+      }
+    }
+
+    if (viewportRange.valid) {
+      m_viewportController->setRange(viewportRange);
     }
   }
 
@@ -442,14 +701,19 @@ bool ChartView::rebuildXYSeriesRenderPackage(
   const auto m = m_plan.plotMargins;
   const auto plotArea = outer.adjusted(m.left, m.top, -m.right, -m.bottom);
 
+  // Too small to form a valid plot (window shrunk past the margins): skip the
+  // build so downstream pixel mapping never divides by a ~0 width/height.
+  if (plotArea.width() < ChartConstants::MIN_PLOT_SIZE ||
+      plotArea.height() < ChartConstants::MIN_PLOT_SIZE) {
+    return false;
+  }
+
   SeriesBuildContext buildContext;
   buildContext.xCategories =
       xIsCategory ? &resolvedResult.sharedXCategories : nullptr;
   buildContext.globalLineWidth = m_generalConfig.lineWidth();
   buildContext.globalAntialiasing = m_generalConfig.antialiasing();
-  // buildContext.dataDownsampler =
-  //     std::make_unique<LargestTriangleThreeBuckets>();
-  buildContext.dataDownsampler = std::make_unique<HybridDownsampler>();
+  buildContext.downsampleMode = m_generalConfig.downsampleMode();
   buildContext.globalPointCache = &m_globalPointCache;
   // N = w / s
   buildContext.preferredTotalPoints =
@@ -459,6 +723,11 @@ bool ChartView::rebuildXYSeriesRenderPackage(
     buildContext.viewportXRange = m_viewportController->getVisibleRange();
     globalX = buildContext.viewportXRange;
   }
+
+  // Rebuilt fresh each pass so hover hit-testing always matches the current
+  // (possibly downsampled / zoomed) on-screen points.
+  QVector<HoverSeriesData> hoverCache;
+  hoverCache.reserve(resolvedResult.xySeries.size());
 
   for (const ResolvedSeriesData &resolved : resolvedResult.xySeries) {
     if (!resolved.valid) {
@@ -485,10 +754,17 @@ bool ChartView::rebuildXYSeriesRenderPackage(
       continue;
     }
 
-    if (m_legendModel && !m_legendModel->isVisible(seriesIndex)) {
-      // m_logger->debug("series {} is hidden", seriesIndex);
-      continue;
-    }
+    // Do NOT skip hidden series before build(). The strategy's build() is what
+    // advances the per-series point cache (processedRowCount, cached points, LOD
+    // pyramid) incrementally. Skipping it while hidden lets the unprocessed
+    // delta grow without bound during ingest: the bounds resolver then rescans
+    // an ever-larger range on every snapshot (quadratic over the load), and
+    // re-showing forces one huge synchronous catch-up allocation — the cause of
+    // the lag/OOM-crash when toggling a series during a large load. We always
+    // build (cheap: O(delta) + O(visible pixels)) and only skip emitting the
+    // render payload / hover entry / Y auto-scale for hidden series below.
+    const bool seriesVisible =
+        !(m_legendModel && !m_legendModel->isVisible(seriesIndex));
 
     QPointer<AbstractSeries> series = m_series[seriesIndex];
     if (!series) {
@@ -519,6 +795,13 @@ bool ChartView::rebuildXYSeriesRenderPackage(
       continue;
     }
 
+    // build() above has kept this series' point cache current. A hidden series
+    // contributes nothing to render, hover hit-testing, or the Y auto-scale, so
+    // stop here once its cache is up to date.
+    if (!seriesVisible) {
+      continue;
+    }
+
     auto *xyData = dynamic_cast<XYSeriesRenderData *>(data.get());
 
     if (!xyData) {
@@ -542,6 +825,16 @@ bool ChartView::rebuildXYSeriesRenderPackage(
     } else {
       globalY = DataRangeCalculator::unionRange(globalY, xyData->yRange);
     }
+
+    // Keep a copy of the drawn points (and label/color) for hover hit-testing.
+    HoverSeriesData hover;
+    hover.seriesIndex = seriesIndex;
+    hover.name = series->name().isEmpty()
+                     ? QStringLiteral("Series %1").arg(seriesIndex + 1)
+                     : series->name();
+    hover.color = series->legendColor();
+    hover.points = xyData->points;
+    hoverCache.push_back(std::move(hover));
 
     SeriesRenderPayload payload;
     payload.seriesIndex = seriesIndex;
@@ -591,9 +884,6 @@ bool ChartView::rebuildXYSeriesRenderPackage(
     }
   }
 
-  m_plotContext.xRange = globalX;
-  m_plotContext.yRange = globalY;
-
   const AxisModel xModel =
       xIsCategory
           ? AxisBuilder::buildCategoryAxis(resolvedResult.sharedXCategories)
@@ -603,6 +893,20 @@ bool ChartView::rebuildXYSeriesRenderPackage(
                                         m_generalConfig.xPreferredTickCount());
   const AxisModel yModel = AxisBuilder::buildValueAxis(
       globalY, false, m_generalConfig.yPreferredTickCount());
+
+  // Category axes render in BetweenTicks mode. The X mapping already follows
+  // the viewport's band range ([-0.5, n-0.5] when unzoomed, a sub-band when
+  // zoomed — see rebuildRenderPackage), so bars and points sit centered in each
+  // band and the axis ticks track the zoom window. Do NOT override globalX to
+  // the full band model range here, or the axis would keep showing every tick
+  // while the bars shrink to the zoom window.
+
+  m_plotContext.xRange = globalX;
+  m_plotContext.yRange = globalY;
+  // Keep plotArea in sync here too (updatePaintNode also sets it) so the
+  // end-of-rebuild hover re-evaluation maps points with the current geometry.
+  m_plotContext.itemRect = outer;
+  m_plotContext.plotArea = plotArea;
 
   /**
    * X axis range will follow the visible range we want, while Y axis range
@@ -617,10 +921,14 @@ bool ChartView::rebuildXYSeriesRenderPackage(
   m_plotContext.axisPositions =
       ChartEnums::AxisPosition::Left | ChartEnums::AxisPosition::Bottom;
 
+  const ChartEnums::TickMode xTickMode =
+      xIsCategory ? ChartEnums::TickMode::BetweenTicks
+                  : ChartEnums::TickMode::OnTick;
+
   package.xAxisPayload = AxisPayload{
       .data = AxisBuilder::toRenderData(
           xModel, ChartEnums::AxisPosition::Bottom, yModel.range.min,
-          AxisRange::fromDataRange(globalX)),
+          AxisRange::fromDataRange(globalX), xTickMode),
   };
   package.yAxisPayload = AxisPayload{
       .data = AxisBuilder::toRenderData(yModel, ChartEnums::AxisPosition::Left,
@@ -628,6 +936,26 @@ bool ChartView::rebuildXYSeriesRenderPackage(
   };
 
   m_pendingRenderPackage = std::move(package);
+
+  // Publish the hover cache + x-axis labelling, then re-evaluate the tooltip
+  // against the last known mouse position so it stays attached to a point after
+  // zoom / streaming updates (when the mouse itself isn't moving).
+  m_hoverSeries = std::move(hoverCache);
+  m_hoverXIsCategory = xIsCategory;
+  m_hoverXIsDate =
+      resolvedResult.sharedXColumnType == ChartEnums::DataType::Date;
+  m_hoverCategories.clear();
+  if (xIsCategory) {
+    const int n = resolvedResult.sharedXCategories.size();
+    m_hoverCategories.reserve(n);
+    for (int i = 0; i < n; ++i) {
+      m_hoverCategories.push_back(resolvedResult.sharedXCategories.labelAt(i));
+    }
+  }
+
+  if (m_hasHoverPos && !m_isPanning) {
+    updateHoveredPoint(m_lastHoverPos);
+  }
 
   // CP_DEBUG("End rebuilding XY Series Render package...");
   return true;
@@ -939,12 +1267,19 @@ QVariantList ChartView::seriesList() const {
 
 void ChartView::applySettings(float globalStrokeWidth, float globalAntialiasing,
                               int xPreferredTickCount, int yPreferredTickCount,
-                              int fps) {
+                              int fps, int downsampleMode, int maxCacheRows) {
   m_generalConfig.setLineWidth(globalStrokeWidth);
   m_generalConfig.setAntialiasing(globalAntialiasing);
+  m_generalConfig.setDownsampleMode(
+      static_cast<ChartEnums::DownsampleMode>(downsampleMode));
   m_generalConfig.setXPreferredTickCount(xPreferredTickCount);
   m_generalConfig.setYPreferredTickCount(yPreferredTickCount);
   m_generalConfig.setFps(fps);
+  m_generalConfig.setMaxCacheRows(maxCacheRows);
+
+  if (m_dataManagerPool) {
+    m_dataManagerPool->setMaxRows(maxCacheRows);
+  }
 
   emit generalConfigChanged();
 

@@ -3,6 +3,7 @@
 #include "ChartPlotter/data/LineRenderData.hpp"
 #include "ChartPlotter/strategy/ISeriesStrategy.hpp"
 
+#include <deque>
 #include <expected>
 
 namespace ChartPlotter {
@@ -23,12 +24,18 @@ private:
   std::expected<void, QString>
   loadSeriesConfig(LineRenderData *data, const AbstractSeries &series,
                    const SeriesBuildContext &context) const;
-  std::pair<QVector<QPointF>::const_iterator, QVector<QPointF>::const_iterator>
-  calculateBound(const QVector<QPointF> &points,
+  std::pair<std::deque<QPointF>::const_iterator,
+            std::deque<QPointF>::const_iterator>
+  calculateBound(const std::deque<QPointF> &points,
                  const SeriesBuildContext &context) const;
   std::expected<void, QString>
   validateTyAndColIndex(const ResolvedSeriesData &resolved,
                         const DataSnapshot &snapshot) const;
+  // x of the earliest live (non-NaN) row = lower edge of the current window.
+  // Used to evict cached points that fall before it. Returns false if no live
+  // row has a valid x.
+  bool firstLiveXValue(const DataSnapshot &snapshot,
+                       const ResolvedSeriesData &resolved, double &out) const;
 };
 
 } // namespace ChartPlotter

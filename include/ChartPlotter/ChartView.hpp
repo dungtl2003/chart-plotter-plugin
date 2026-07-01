@@ -15,6 +15,7 @@
 #include <spdlog/spdlog.h>
 
 #include <QQuickItem>
+#include <QVariantMap>
 #include <QtQml>
 #include <memory>
 
@@ -26,8 +27,6 @@ class GeneralConfig : public QObject {
 
   Q_PROPERTY(
       float lineWidth READ lineWidth WRITE setLineWidth NOTIFY lineWidthChanged)
-  Q_PROPERTY(
-      float barWidth READ barWidth WRITE setBarWidth NOTIFY barWidthChanged)
   Q_PROPERTY(float antialiasing READ antialiasing WRITE setAntialiasing NOTIFY
                  antialiasingChanged)
   Q_PROPERTY(int xPreferredTickCount READ xPreferredTickCount WRITE
@@ -37,23 +36,27 @@ class GeneralConfig : public QObject {
   Q_PROPERTY(int pointSpacingPx READ pointSpacingPx WRITE setPointSpacingPx
                  NOTIFY pointSpacingPxChanged)
   Q_PROPERTY(int fps READ fps WRITE setFps NOTIFY fpsChanged)
+  Q_PROPERTY(
+      ChartPlotter::ChartEnums::DownsampleMode downsampleMode READ
+          downsampleMode WRITE setDownsampleMode NOTIFY downsampleModeChanged)
+  // Max rows kept in memory per data source. When exceeded, the oldest rows are
+  // evicted permanently (sliding window). <= 0 means unlimited.
+  Q_PROPERTY(int maxCacheRows READ maxCacheRows WRITE setMaxCacheRows NOTIFY
+                 maxCacheRowsChanged)
 
 public:
   static constexpr float DEFAULT_LINE_WIDTH = 5.0;
-  static constexpr float DEFAULT_BAR_WIDTH = 12.0;
   static constexpr float DEFAULT_AA = 1.0;
   static constexpr int DEFAULT_X_PREFERRED_TICK_COUNT = 6;
   static constexpr int DEFAULT_Y_PREFFERED_TICK_COUNT = 6;
   static constexpr int DEFAULT_POINT_SPACING_PX = 8;
   static constexpr int DEFAULT_FPS = 60;
+  static constexpr int DEFAULT_MAX_CACHE_ROWS = -1; // unlimited
 
   explicit GeneralConfig(QObject *parent = nullptr);
 
   float lineWidth() const;
   void setLineWidth(float newWidth);
-
-  float barWidth() const;
-  void setBarWidth(float newWidth);
 
   float antialiasing() const;
   void setAntialiasing(float a);
@@ -70,23 +73,32 @@ public:
   int fps() const;
   void setFps(int fps);
 
+  ChartEnums::DownsampleMode downsampleMode() const;
+  void setDownsampleMode(ChartEnums::DownsampleMode mode);
+
+  int maxCacheRows() const;
+  void setMaxCacheRows(int maxRows);
+
 signals:
   void lineWidthChanged();
-  void barWidthChanged();
   void antialiasingChanged();
   void xPreferredTickCountChanged();
   void yPreferredTickCountChanged();
   void pointSpacingPxChanged();
   void fpsChanged();
+  void downsampleModeChanged();
+  void maxCacheRowsChanged();
 
 private:
   float m_lineWidth = DEFAULT_LINE_WIDTH;
-  float m_barWidth = DEFAULT_BAR_WIDTH;
   float m_antialiasing = DEFAULT_AA;
   int m_xPreferredTickCount = DEFAULT_X_PREFERRED_TICK_COUNT;
   int m_yPreferredTickCount = DEFAULT_Y_PREFFERED_TICK_COUNT;
   int m_pointSpacingPx = DEFAULT_POINT_SPACING_PX;
   int m_fps = DEFAULT_FPS;
+  ChartEnums::DownsampleMode m_downsampleMode =
+      ChartEnums::DownsampleMode::MinMax;
+  int m_maxCacheRows = DEFAULT_MAX_CACHE_ROWS;
 };
 
 class ChartView : public QQuickItem {
@@ -110,6 +122,12 @@ class ChartView : public QQuickItem {
                  legendItemChanged)
 
   Q_PROPERTY(QVariantList seriesList READ seriesList NOTIFY seriesListChanged)
+
+  // Data point currently under the mouse, for a hover tooltip. Empty map when
+  // nothing is hovered; otherwise carries {active, x, y, seriesName, color,
+  // xLabel, yLabel, xValue, yValue}. x/y are in this item's coordinates.
+  Q_PROPERTY(
+      QVariantMap hoveredPoint READ hoveredPoint NOTIFY hoveredPointChanged)
 
 public:
   using RendererCreator = std::function<std::unique_ptr<IOpenGLRenderer>()>;
@@ -145,11 +163,21 @@ public:
 
   QVariantList seriesList() const;
 
-  Q_INVOKABLE void applySettings(float globalStrokeWidth, float globalBarWidth,
+  QVariantMap hoveredPoint() const;
+
+  Q_INVOKABLE void applySettings(float globalStrokeWidth,
                                  float globalAntialiasing,
                                  int xPreferredTickCount,
-                                 int yPreferredTickCount, int fps);
+                                 int yPreferredTickCount, int fps,
+                                 int downsampleMode, int maxCacheRows);
   Q_INVOKABLE void resetZoom();
+
+  // Register/unregister a series created imperatively (e.g. by an Instantiator
+  // or Repeater, whose delegates are NOT placed in the `content` default
+  // property and therefore never reach appendContent). Safe to call before or
+  // after componentComplete; triggers a replan + rebuild when already complete.
+  Q_INVOKABLE void addSeries(QObject *series);
+  Q_INVOKABLE void removeSeries(QObject *series);
 
 public slots:
   void onDataError(const QString &message);
@@ -163,6 +191,8 @@ protected:
   void mousePressEvent(QMouseEvent *event) override;
   void mouseMoveEvent(QMouseEvent *event) override;
   void mouseReleaseEvent(QMouseEvent *event) override;
+  void hoverMoveEvent(QHoverEvent *event) override;
+  void hoverLeaveEvent(QHoverEvent *event) override;
 
 signals:
   void nameChanged();
@@ -172,8 +202,19 @@ signals:
   void titleItemChanged();
   void legendItemChanged();
   void seriesListChanged();
+  void hoveredPointChanged();
 
 private:
+  // Lightweight copy of each visible series' drawn points (data coords) plus
+  // the metadata needed to label a hover tooltip. Refreshed on every render
+  // rebuild so hit-testing matches exactly what is on screen.
+  struct HoverSeriesData {
+    int seriesIndex = -1;
+    QString name;
+    QColor color;
+    QVector<QPointF> points;
+  };
+
   QPointer<DataManagerPool> m_dataManagerPool = nullptr;
   QHash<int, DataSnapshot> m_snapshots;
   QList<QPointer<QObject>> m_content;
@@ -206,6 +247,19 @@ private:
   DataRange m_lockedYRange;
 
   QHash<PointCacheKey, PointCacheValue> m_globalPointCache;
+
+  QVector<HoverSeriesData> m_hoverSeries;
+  bool m_hoverXIsCategory = false;
+  bool m_hoverXIsDate = false; // x is epoch-ms datetime
+  QStringList
+      m_hoverCategories; // label by global category id (category x only)
+  QVariantMap m_hoveredPoint;
+  QPointF m_lastHoverPos;
+  bool m_hasHoverPos = false;
+
+  QPointF mapDataToScreen(double dataX, double dataY) const;
+  void updateHoveredPoint(const QPointF &pos);
+  void clearHoveredPoint();
 
   void dropLogger();
   std::string appendUniqueId(std::string s) const;

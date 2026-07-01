@@ -5,8 +5,6 @@
 #include <QSocketNotifier>
 #include <QUrl>
 
-#include <atomic>
-
 namespace ChartPlotter {
 
 class FifoDataReader : public AbstractDataReader {
@@ -31,7 +29,6 @@ private:
   int m_fd = -1;
   QSocketNotifier *m_notifier = nullptr;
   bool m_running = false;
-  std::atomic_bool m_stopRequested = false;
   bool m_configLoaded = false;
 
   bool openFifo();

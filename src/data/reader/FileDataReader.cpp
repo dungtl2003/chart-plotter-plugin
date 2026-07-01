@@ -2,11 +2,19 @@
 #include "ChartPlotter/types/ChartEnums.hpp"
 #include "ChartPlotter/utils/LoggerManager.hpp"
 
+#include <QElapsedTimer>
+#include <QThread>
+
 namespace ChartPlotter {
 
 namespace {
 constexpr qint64 DefaultChunkSize = 2 * ChartEnums::DataUnit::Mb;
+
+quintptr currentThreadId() {
+  return reinterpret_cast<quintptr>(QThread::currentThreadId());
 }
+
+} // namespace
 
 FileDataReader::FileDataReader(QObject *parent) : AbstractDataReader(parent) {}
 
@@ -19,6 +27,8 @@ void FileDataReader::setConfig(const DataReaderConfig &config) {
         QString::number(DefaultChunkSize)));
     m_config.chunkSize = DefaultChunkSize;
   }
+
+  setQueueCapacity(m_config.maxQueuedChunks);
 
   m_configLoaded = true;
 }
@@ -67,9 +77,22 @@ void FileDataReader::start() {
     return;
   }
 
+  QElapsedTimer readTimer;
+  readTimer.start();
+  int chunkIndex = 0;
+  qint64 totalBytes = 0;
+
+  CP_INFO("[reader|thread {:#x}] begin reading '{}' (chunk size {} KB) — "
+          "running off the data-handler/UI thread",
+          currentThreadId(), localPath.toStdString(),
+          m_config.chunkSize / ChartEnums::DataUnit::Kb);
+
   while (!file.atEnd()) {
     if (m_stopRequested.load()) {
       file.close();
+      CP_INFO("[reader|thread {:#x}] stop requested — halting after {} chunks "
+              "({} bytes)",
+              currentThreadId(), chunkIndex, totalBytes);
       finishStopped();
       return;
     }
@@ -91,8 +114,23 @@ void FileDataReader::start() {
       break;
     }
 
-    emit dataReceived(std::move(chunk));
+    ++chunkIndex;
+    totalBytes += chunk.size();
+    CP_INFO(
+        "[reader|thread {:#x}] read chunk #{} ({} bytes, {} total) — handing "
+        "off to data handler",
+        currentThreadId(), chunkIndex, chunk.size(), totalBytes);
+
+    // Backpressure: blocks here while the parser is behind and the queue is
+    // full, returning early (without emitting) if a stop is requested. When the
+    // next "read chunk" line stalls, the reader is waiting on the data handler.
+    emitChunk(std::move(chunk));
   }
+
+  CP_INFO(
+      "[reader|thread {:#x}] done — read {} chunks, {} bytes in {} ms (read "
+      "alone, overlapped with parsing on the data-handler thread)",
+      currentThreadId(), chunkIndex, totalBytes, readTimer.elapsed());
 
   file.close();
   finishNormally();
