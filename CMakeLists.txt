@@ -119,20 +119,24 @@ set(CHARTPLOTTER_HEADERS
     include/ChartPlotter/strategy/ISeriesStrategy.hpp
     include/ChartPlotter/strategy/LineSeriesStrategy.hpp
     include/ChartPlotter/strategy/BarSeriesStrategy.hpp
+    include/ChartPlotter/strategy/PieSeriesStrategy.hpp
 
     include/ChartPlotter/renderer/IOpenGLRenderer.hpp
     include/ChartPlotter/renderer/OpenGLLineRenderer.hpp
     include/ChartPlotter/renderer/OpenGLBarRenderer.hpp
+    include/ChartPlotter/renderer/OpenGLPieRenderer.hpp
     include/ChartPlotter/renderer/OpenGLAxisRenderer.hpp
 
     include/ChartPlotter/factory/ISeriesComponentFactory.hpp
     include/ChartPlotter/factory/LineSeriesComponentFactory.hpp
     include/ChartPlotter/factory/BarSeriesComponentFactory.hpp
+    include/ChartPlotter/factory/PieSeriesComponentFactory.hpp
     include/ChartPlotter/factory/SeriesComponentFactoryProvider.hpp
 
     include/ChartPlotter/data/RenderData.hpp
     include/ChartPlotter/data/LineRenderData.hpp
     include/ChartPlotter/data/BarRenderData.hpp
+    include/ChartPlotter/data/PieRenderData.hpp
     include/ChartPlotter/data/AxisRenderData.hpp
     include/ChartPlotter/data/DataSource.hpp
     include/ChartPlotter/data/Column.hpp
@@ -154,6 +158,8 @@ set(CHARTPLOTTER_HEADERS
     include/ChartPlotter/data/parser/CsvDataParser.hpp
     include/ChartPlotter/data/parser/FastCsvDataParser.hpp
     include/ChartPlotter/data/parser/BinanceBasicJsonDataParser.hpp
+    include/ChartPlotter/data/parser/BinanceTickerJsonDataParser.hpp
+    include/ChartPlotter/data/parser/BinanceTradeJsonDataParser.hpp
     include/ChartPlotter/data/parser/DataParserFactory.hpp
     include/ChartPlotter/data/CsvRowBatch.hpp
 
@@ -197,13 +203,16 @@ set(CHARTPLOTTER_SOURCES
 
     src/strategy/LineSeriesStrategy.cpp
     src/strategy/BarSeriesStrategy.cpp
+    src/strategy/PieSeriesStrategy.cpp
 
     src/renderer/OpenGLLineRenderer.cpp
     src/renderer/OpenGLBarRenderer.cpp
+    src/renderer/OpenGLPieRenderer.cpp
     src/renderer/OpenGLAxisRenderer.cpp
 
     src/factory/LineSeriesComponentFactory.cpp
     src/factory/BarSeriesComponentFactory.cpp
+    src/factory/PieSeriesComponentFactory.cpp
     src/factory/SeriesComponentFactoryProvider.cpp
 
     src/data/DataSource.cpp
@@ -225,6 +234,8 @@ set(CHARTPLOTTER_SOURCES
     src/data/parser/CsvDataParser.cpp
     src/data/parser/FastCsvDataParser.cpp
     src/data/parser/BinanceBasicJsonDataParser.cpp
+    src/data/parser/BinanceTickerJsonDataParser.cpp
+    src/data/parser/BinanceTradeJsonDataParser.cpp
     src/data/parser/DataParserFactory.cpp
 
     src/axis/AxisBuilder.cpp
@@ -253,6 +264,8 @@ set(CHARTPLOTTER_SHADERS
     shaders/line/marker.frag
     shaders/bar/bar.vert
     shaders/bar/bar.frag
+    shaders/pie/pie.vert
+    shaders/pie/pie.frag
     shaders/circle/circle.vert
     shaders/circle/circle.frag
     shaders/circle/circle-sdf.vert
@@ -342,7 +355,9 @@ if(CMAKE_PROJECT_NAME STREQUAL PROJECT_NAME)
     
     if(BUILD_EXAMPLES)
         add_subdirectory(examples/BasicChart)
+        add_subdirectory(examples/ChartGallery)
         add_subdirectory(examples/BarChart)
+        add_subdirectory(examples/PieChart)
         add_subdirectory(examples/NumericBarChart)
         add_subdirectory(examples/MixedChart)
         add_subdirectory(examples/BinanceChart)

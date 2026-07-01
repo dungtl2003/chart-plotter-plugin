@@ -67,8 +67,8 @@ private:
   qint64 m_chunkSize = 2 * ChartEnums::DataUnit::Mb;
   std::unique_ptr<DataBuffer> m_buffer;
   QVector<Column *> m_columns;
-  bool m_hasHeader;
-  int m_skipRows;
+  bool m_hasHeader = false;
+  int m_skipRows = 0;
 
   static void appendColumn(QQmlListProperty<Column> *list, Column *column);
   static qsizetype columnCount(QQmlListProperty<Column> *list);

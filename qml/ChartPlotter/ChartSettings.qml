@@ -28,6 +28,11 @@ Button {
         id: lines
     }
 
+    // Pie slices (label + editable color swatch). Populated only for a pie chart.
+    ListModel {
+        id: pieSlicesModel
+    }
+
     function loadDraft() {
         if (!chart)
             return;
@@ -43,9 +48,16 @@ Button {
         gMaxRows.value = cap > 0 ? cap : gMaxRows.from;
 
         lines.clear();
+        pieSlicesModel.clear();
         const list = chart.seriesList;
         for (let i = 0; i < list.length; ++i) {
             const s = list[i];
+
+            // Pie has no per-series stroke/marker settings — its slices are
+            // edited in a dedicated section below, so skip it here.
+            if (s.seriesType === ChartEnums.SeriesType.Pie)
+                continue;
+
             const title = (s.name && s.name.length) ? s.name : ("Series " + (i + 1));
 
             // Unified row — keep every role present so ListModel roles stay stable.
@@ -80,6 +92,15 @@ Button {
 
             lines.append(row);
         }
+
+        // Pie slices come from the chart (label + current color).
+        const slices = chart.pieSlices;
+        for (let j = 0; j < slices.length; ++j) {
+            pieSlicesModel.append({
+                label: slices[j].label,
+                swatch: "" + slices[j].color
+            });
+        }
     }
 
     function applyDraft() {
@@ -101,6 +122,20 @@ Button {
                 s.strokePattern = d.pattern;
             }
         }
+        // Pie slice colors → the pie series' `colors` list (index-aligned to the
+        // slices). applySettings() below triggers the rebuild that repaints them.
+        if (pieSlicesModel.count > 0) {
+            const cols = [];
+            for (let j = 0; j < pieSlicesModel.count; ++j)
+                cols.push(pieSlicesModel.get(j).swatch);
+            for (let k = 0; k < list.length; ++k) {
+                if (list[k].seriesType === ChartEnums.SeriesType.Pie) {
+                    list[k].colors = cols;
+                    break;
+                }
+            }
+        }
+
         // global + one rebuild. Unchecked "limit" => 0 (unlimited). The downsample
         // mode is no longer user-editable here, so pass through its current value.
         const maxRows = gLimitRows.checked ? gMaxRows.value : 0;
@@ -250,10 +285,61 @@ Button {
                 }
             }
 
+            // ---- Pie: per-slice colors (shown only for a pie chart) ----
+            GroupBox {
+                title: "Pie slices — click a swatch to recolor"
+                Layout.fillWidth: true
+                Layout.fillHeight: true
+                visible: pieSlicesModel.count > 0
+
+                ColumnLayout {
+                    anchors.fill: parent
+                    spacing: 6
+
+                    Repeater {
+                        model: pieSlicesModel
+
+                        delegate: RowLayout {
+                            id: sliceRow
+                            required property var model
+                            required property int index
+                            Layout.fillWidth: true
+                            spacing: 10
+
+                            Label {
+                                text: sliceRow.model.label
+                                elide: Text.ElideRight
+                                Layout.fillWidth: true
+                            }
+                            Rectangle {
+                                Layout.preferredWidth: 34
+                                Layout.preferredHeight: 22
+                                radius: 4
+                                color: sliceRow.model.swatch
+                                border.color: "#cfcfd6"
+                                border.width: 1
+                                TapHandler {
+                                    onTapped: {
+                                        pieColorDlg.slice = sliceRow.index;
+                                        pieColorDlg.selectedColor = sliceRow.model.swatch;
+                                        pieColorDlg.open();
+                                    }
+                                }
+                            }
+                        }
+                    }
+
+                    Item {
+                        Layout.fillHeight: true
+                    }
+                }
+            }
+
             Label {
                 text: "Per series"
                 font.bold: true
                 Layout.topMargin: 4
+                visible: pieSlicesModel.count === 0
             }
 
             ListView {
@@ -261,6 +347,7 @@ Button {
                 Layout.fillHeight: true
                 clip: true
                 spacing: 10
+                visible: pieSlicesModel.count === 0
                 model: lines
 
                 delegate: Frame {
@@ -435,6 +522,13 @@ Button {
             property int line: -1
             onAccepted: if (line >= 0)
                 lines.setProperty(line, "swatch", "" + selectedColor)
+        }
+
+        ColorDialog {
+            id: pieColorDlg
+            property int slice: -1
+            onAccepted: if (slice >= 0)
+                pieSlicesModel.setProperty(slice, "swatch", "" + selectedColor)
         }
     }
 }

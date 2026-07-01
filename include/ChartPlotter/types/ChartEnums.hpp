@@ -27,7 +27,9 @@ public:
     Xlsx,
     Json,
     BasicJson,
-    BinanceBasicJson
+    BinanceBasicJson,
+    BinanceTickerJson,
+    BinanceTradeJson
   };
   Q_ENUM(DataFormat)
 

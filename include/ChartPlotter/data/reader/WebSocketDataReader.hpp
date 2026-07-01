@@ -30,7 +30,12 @@ private slots:
 
 private:
   DataReaderConfig m_config;
-  QWebSocket m_webSocket;
+  // Created lazily in start() (which runs on the reader thread) and parented to
+  // this reader, so its thread affinity matches the thread that drives it. A
+  // value member would be constructed on the creating thread and NOT moved by
+  // moveToThread() (it is not a QObject child), which crashes when open() then
+  // creates child sockets on a different thread.
+  QWebSocket *m_webSocket = nullptr;
   bool m_running = false;
   bool m_configLoaded = false;
 

@@ -129,6 +129,18 @@ class ChartView : public QQuickItem {
   Q_PROPERTY(
       QVariantMap hoveredPoint READ hoveredPoint NOTIFY hoveredPointChanged)
 
+  // Current pie slices as a list of {label, color, value, percentage} maps
+  // (empty for a non-pie chart). Lets a settings UI enumerate the slices to
+  // edit their colors (write back via the PieSeries `colors` property).
+  Q_PROPERTY(QVariantList pieSlices READ pieSlices NOTIFY pieSlicesChanged)
+
+  Q_PROPERTY(
+      bool zoomWheelRequiresModifier READ zoomWheelRequiresModifier WRITE
+          setZoomWheelRequiresModifier NOTIFY zoomWheelRequiresModifierChanged)
+  Q_PROPERTY(
+      bool panDragRequiresModifier READ panDragRequiresModifier WRITE
+          setPanDragRequiresModifier NOTIFY panDragRequiresModifierChanged)
+
 public:
   using RendererCreator = std::function<std::unique_ptr<IOpenGLRenderer>()>;
 
@@ -164,6 +176,13 @@ public:
   QVariantList seriesList() const;
 
   QVariantMap hoveredPoint() const;
+  QVariantList pieSlices() const;
+
+  bool zoomWheelRequiresModifier() const;
+  void setZoomWheelRequiresModifier(bool requiresModifier);
+
+  bool panDragRequiresModifier() const;
+  void setPanDragRequiresModifier(bool requiresModifier);
 
   Q_INVOKABLE void applySettings(float globalStrokeWidth,
                                  float globalAntialiasing,
@@ -203,6 +222,9 @@ signals:
   void legendItemChanged();
   void seriesListChanged();
   void hoveredPointChanged();
+  void pieSlicesChanged();
+  void zoomWheelRequiresModifierChanged();
+  void panDragRequiresModifierChanged();
 
 private:
   // Lightweight copy of each visible series' drawn points (data coords) plus
@@ -246,6 +268,9 @@ private:
   QPointF m_panLastMousePos;
   DataRange m_lockedYRange;
 
+  bool m_zoomWheelRequiresModifier = false;
+  bool m_panDragRequiresModifier = false;
+
   QHash<PointCacheKey, PointCacheValue> m_globalPointCache;
 
   QVector<HoverSeriesData> m_hoverSeries;
@@ -256,6 +281,12 @@ private:
   QVariantMap m_hoveredPoint;
   QPointF m_lastHoverPos;
   bool m_hasHoverPos = false;
+
+  // Pie state, refreshed on each pie rebuild. `m_pieSlices` backs the QML
+  // `pieSlices` property; `m_pieLegendEntries` is the per-slice legend so
+  // rebuildLegendModel() can restore it (a pie has no per-series legend).
+  QVariantList m_pieSlices;
+  QVector<LegendEntry> m_pieLegendEntries;
 
   QPointF mapDataToScreen(double dataX, double dataY) const;
   void updateHoveredPoint(const QPointF &pos);

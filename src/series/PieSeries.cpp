@@ -24,6 +24,16 @@ void PieSeries::setValue(const QString &newValue) {
   emit valueChanged();
 }
 
+QVariantList PieSeries::colors() const { return m_colors; }
+void PieSeries::setColors(const QVariantList &newColors) {
+  if (m_colors == newColors) {
+    return;
+  }
+
+  m_colors = newColors;
+  emit colorsChanged();
+}
+
 ChartEnums::SeriesType PieSeries::type() const {
   return ChartEnums::SeriesType::Pie;
 }

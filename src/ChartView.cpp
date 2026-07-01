@@ -2,6 +2,7 @@
 
 #include "ChartPlotter/axis/AxisBuilder.hpp"
 #include "ChartPlotter/constants/ChartConstants.hpp"
+#include "ChartPlotter/data/PieRenderData.hpp"
 #include "ChartPlotter/data/RenderData.hpp"
 #include "ChartPlotter/factory/SeriesComponentFactoryProvider.hpp"
 #include "ChartPlotter/node/ChartRenderNode.hpp"
@@ -225,10 +226,11 @@ void ChartView::geometryChange(const QRectF &newGeom, const QRectF &oldGeom) {
 }
 
 void ChartView::wheelEvent(QWheelEvent *event) {
-  // if (!(event->modifiers() & Qt::ControlModifier)) {
-  //   QQuickItem::wheelEvent(event);
-  //   return;
-  // }
+  if (m_zoomWheelRequiresModifier &&
+      !(event->modifiers() & Qt::ControlModifier)) {
+    event->ignore();
+    return;
+  }
 
   /**
    * When you scroll a standard mouse wheel by one physical notch, the
@@ -259,14 +261,17 @@ void ChartView::wheelEvent(QWheelEvent *event) {
   QPointF mousePos = event->position();
 
   if (numSteps.isNull() || mousePos.isNull() || numSteps.y() == 0) {
+    event->ignore();
     return;
   }
 
   if (!m_viewportController || !m_plotContext.plotArea.isValid()) {
+    event->ignore();
     return;
   }
 
   if (!m_plotContext.plotArea.contains(mousePos)) {
+    event->ignore();
     return;
   }
 
@@ -284,11 +289,18 @@ void ChartView::mousePressEvent(QMouseEvent *event) {
     return;
   }
 
+  if (m_panDragRequiresModifier &&
+      !(event->modifiers() & Qt::ControlModifier)) {
+    event->ignore();
+    return;
+  }
+
   m_isPanning = true;
   m_panLastMousePos = event->position();
   m_lockedYRange = m_plotContext.yRange;
-  clearHoveredPoint(); // hide tooltip while dragging
-  grabMouse();         // Capture all mouse events
+  clearHoveredPoint();    // hide tooltip while dragging
+  grabMouse();            // Capture all mouse events
+  setKeepMouseGrab(true); // don't let an ancestor Flickable steal the drag
   event->accept();
 }
 
@@ -339,6 +351,7 @@ void ChartView::mouseReleaseEvent(QMouseEvent *event) {
     scheduleUpdate();
   }
 
+  setKeepMouseGrab(false);
   ungrabMouse(); // Release the mouse capture
   event->accept();
 }
@@ -445,6 +458,29 @@ void ChartView::updateHoveredPoint(const QPointF &pos) {
 }
 
 QVariantMap ChartView::hoveredPoint() const { return m_hoveredPoint; }
+QVariantList ChartView::pieSlices() const { return m_pieSlices; }
+
+bool ChartView::zoomWheelRequiresModifier() const {
+  return m_zoomWheelRequiresModifier;
+}
+void ChartView::setZoomWheelRequiresModifier(bool requiresModifier) {
+  if (m_zoomWheelRequiresModifier == requiresModifier) {
+    return;
+  }
+  m_zoomWheelRequiresModifier = requiresModifier;
+  emit zoomWheelRequiresModifierChanged();
+}
+
+bool ChartView::panDragRequiresModifier() const {
+  return m_panDragRequiresModifier;
+}
+void ChartView::setPanDragRequiresModifier(bool requiresModifier) {
+  if (m_panDragRequiresModifier == requiresModifier) {
+    return;
+  }
+  m_panDragRequiresModifier = requiresModifier;
+  emit panDragRequiresModifierChanged();
+}
 
 void ChartView::onDataError(const QString &message) {
   m_logger->warn(message.toStdString());
@@ -755,8 +791,8 @@ bool ChartView::rebuildXYSeriesRenderPackage(
     }
 
     // Do NOT skip hidden series before build(). The strategy's build() is what
-    // advances the per-series point cache (processedRowCount, cached points, LOD
-    // pyramid) incrementally. Skipping it while hidden lets the unprocessed
+    // advances the per-series point cache (processedRowCount, cached points,
+    // LOD pyramid) incrementally. Skipping it while hidden lets the unprocessed
     // delta grow without bound during ingest: the bounds resolver then rescans
     // an ever-larger range on every snapshot (quadratic over the load), and
     // re-showing forces one huge synchronous catch-up allocation — the cause of
@@ -961,10 +997,106 @@ bool ChartView::rebuildXYSeriesRenderPackage(
   return true;
 }
 
-// TODO
 bool ChartView::rebuildPieSeriesRenderPackage(
     const SeriesResolveResult &resolvedSeries) {
-  return false;
+  // The layout policies guarantee a single pie series, no XY mix.
+  if (resolvedSeries.pieSeries.isEmpty()) {
+    m_logger->warn(
+        "ChartView::rebuildPieSeriesRenderPackage: no pie series resolved");
+    return false;
+  }
+
+  const ResolvedSeriesData &resolved = resolvedSeries.pieSeries.first();
+  if (!resolved.valid) {
+    m_logger->warn("ChartView::rebuildPieSeriesRenderPackage: {}",
+                   resolved.errorMessage.toStdString());
+    return false;
+  }
+
+  const int seriesIndex = resolved.seriesIndex;
+  if (seriesIndex < 0 || seriesIndex >= m_series.size() ||
+      seriesIndex >= static_cast<int>(m_strategies.size()) ||
+      !m_strategies[seriesIndex] || !m_series[seriesIndex]) {
+    m_logger->warn("ChartView::rebuildPieSeriesRenderPackage: invalid series "
+                   "index {}",
+                   seriesIndex);
+    return false;
+  }
+
+  auto snapshotIt = m_snapshots.constFind(resolved.sourceId);
+  if (snapshotIt == m_snapshots.constEnd()) {
+    m_logger->info("ChartView::rebuildPieSeriesRenderPackage: no snapshot for "
+                   "sourceId {}, skipping",
+                   resolved.sourceId);
+    return false;
+  }
+
+  const QRectF outer =
+      m_plotOuterRect.isValid() ? m_plotOuterRect : boundingRect();
+  const auto m = m_plan.plotMargins;
+  const auto plotArea = outer.adjusted(m.left, m.top, -m.right, -m.bottom);
+
+  if (plotArea.width() < ChartConstants::MIN_PLOT_SIZE ||
+      plotArea.height() < ChartConstants::MIN_PLOT_SIZE) {
+    return false;
+  }
+
+  SeriesBuildContext buildContext;
+  buildContext.globalPointCache = &m_globalPointCache;
+
+  std::unique_ptr<RenderData> data = m_strategies[seriesIndex]->build(
+      *m_series[seriesIndex], resolved, snapshotIt.value(), buildContext);
+
+  auto *pieData = dynamic_cast<PieRenderData *>(data.get());
+  if (!pieData || !pieData->valid) {
+    m_logger->warn("ChartView::rebuildPieSeriesRenderPackage: strategy "
+                   "returned invalid render data for series index {}",
+                   seriesIndex);
+    return false;
+  }
+
+  // Publish the slices for the QML `pieSlices` property (so a settings UI can
+  // edit colours) and rebuild the per-slice legend. The pie has no axes, so the
+  // legend is how slices are labelled.
+  m_pieSlices.clear();
+  m_pieLegendEntries.clear();
+  m_pieSlices.reserve(pieData->slices.size());
+  m_pieLegendEntries.reserve(pieData->slices.size());
+  for (const PieSlice &slice : pieData->slices) {
+    QVariantMap sliceMap;
+    sliceMap["label"] = slice.label;
+    sliceMap["color"] = slice.color;
+    sliceMap["value"] = slice.value;
+    sliceMap["percentage"] = slice.percentage;
+    m_pieSlices.push_back(sliceMap);
+
+    LegendEntry entry;
+    entry.name = QStringLiteral("%1 (%2%)")
+                     .arg(slice.label)
+                     .arg(QString::number(slice.percentage, 'f', 1));
+    entry.color = slice.color;
+    m_pieLegendEntries.push_back(entry);
+  }
+  rebuildLegendModel();
+  emit pieSlicesChanged();
+
+  ChartRenderPackage package;
+  SeriesRenderPayload payload;
+  payload.seriesIndex = seriesIndex;
+  payload.data = std::move(data);
+  package.seriesPayloads.push_back(std::move(payload));
+
+  // No axes for a pie: leave the axis payloads null so the axis renderers skip.
+  m_plotContext.itemRect = outer;
+  m_plotContext.plotArea = plotArea;
+  m_plotContext.axisPositions = {};
+
+  // Pie has no hover hit-testing (yet); clear any stale XY hover state.
+  m_hoverSeries.clear();
+  clearHoveredPoint();
+
+  m_pendingRenderPackage = std::move(package);
+  return true;
 }
 
 std::vector<std::unique_ptr<IOpenGLRenderer>>
@@ -1182,6 +1314,15 @@ void ChartView::rebuildLegendModel() {
   if (!m_legendModel) {
     return;
   }
+
+  // A pie has no per-series legend; its legend is one entry per slice, computed
+  // during the pie rebuild and cached in m_pieLegendEntries. Restore it here so
+  // paths that re-run rebuildLegendModel (e.g. applySettings) don't clobber it.
+  if (m_plan.coordinateSystem == CoordinateSystem::Pie) {
+    m_legendModel->setEntries(m_pieLegendEntries);
+    return;
+  }
+
   QVector<LegendEntry> entries;
   entries.reserve(m_series.size());
   for (int i = 0; i < m_series.size(); ++i) {

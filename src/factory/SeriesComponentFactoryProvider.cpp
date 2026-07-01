@@ -1,6 +1,7 @@
 #include "ChartPlotter/factory/SeriesComponentFactoryProvider.hpp"
 #include "ChartPlotter/factory/BarSeriesComponentFactory.hpp"
 #include "ChartPlotter/factory/LineSeriesComponentFactory.hpp"
+#include "ChartPlotter/factory/PieSeriesComponentFactory.hpp"
 
 namespace ChartPlotter {
 
@@ -11,6 +12,8 @@ SeriesComponentFactoryProvider::getFactory(ChartEnums::SeriesType type) {
     return std::make_unique<LineSeriesComponentFactory>();
   case ChartEnums::SeriesType::Bar:
     return std::make_unique<BarSeriesComponentFactory>();
+  case ChartEnums::SeriesType::Pie:
+    return std::make_unique<PieSeriesComponentFactory>();
   default:
     return nullptr;
   }

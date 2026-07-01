@@ -96,12 +96,12 @@ QVector<DashRun> buildDashRuns(const QVector<QVector2D> &points,
     return runs;
   }
 
-  float distanceAlongPolyline = 0.0f;
+  float distanceAlongPolyline =
+      0.0f;             // total length walked across ALL prior segments
+  DashRun currentRun;   // the dash currently being built
+  bool runOpen = false; // are we mid-dash right now?
 
-  DashRun currentRun;
-  bool runOpen = false;
-
-  for (int i = 0; i + 1 < points.size(); ++i) {
+  for (int i = 0; i + 1 < points.size(); ++i) { // walk each segment
     const QVector2D a = points[i];
     const QVector2D b = points[i + 1];
 
@@ -113,8 +113,7 @@ QVector<DashRun> buildDashRuns(const QVector<QVector2D> &points,
     }
 
     float distanceOnSegment = 0.0f;
-
-    while (distanceOnSegment < segLen) {
+    while (distanceOnSegment < segLen) { // walk WITHIN segment
       const float globalDistance = distanceAlongPolyline + distanceOnSegment;
       const float patternPos = std::fmod(globalDistance, patternLength);
       const bool insideDash = patternPos < dashLength;
