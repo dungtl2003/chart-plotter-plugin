@@ -48,6 +48,10 @@ public:
   static constexpr int FPS_MIN = 1;
   static constexpr int FPS_MAX = 240;
 
+  // Length of the rolling window over which the debug-only render performance
+  // monitor (frameSwapped-based FPS + resident memory) aggregates and logs.
+  static constexpr int PERF_REPORT_INTERVAL_MS = 1000;
+
   int lineStrokeMinWidth() const { return LINE_STROKE_WIDTH_MIN; }
   int lineStrokeMaxWidth() const { return LINE_STROKE_WIDTH_MAX; }
   int lineMinAA() const { return LINE_AA_MIN; }

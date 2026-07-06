@@ -12,13 +12,45 @@
 
 #include <QDateTime>
 #include <QHoverEvent>
+#include <QTimeZone>
+#include <QQuickWindow>
 
 #include <algorithm>
 #include <cmath>
 
+#if defined(__linux__)
+#include <cstdio>
+#include <unistd.h>
+#endif
+
 namespace ChartPlotter {
 
 namespace {
+
+// Current process resident set size (physical memory) in bytes, or 0 when it
+// cannot be determined on this platform. Backs the debug render performance
+// log so the report's resident-memory column can be filled from a live run.
+std::size_t residentSetSizeBytes() {
+#if defined(__linux__)
+  // /proc/self/statm: total, resident, share, ... (values are in pages).
+  std::FILE *f = std::fopen("/proc/self/statm", "r");
+  if (!f) {
+    return 0;
+  }
+  long long total = 0;
+  long long resident = 0;
+  const int matched = std::fscanf(f, "%lld %lld", &total, &resident);
+  std::fclose(f);
+  if (matched < 2 || resident < 0) {
+    return 0;
+  }
+  const long pageSize = ::sysconf(_SC_PAGESIZE);
+  return static_cast<std::size_t>(resident) * static_cast<std::size_t>(pageSize);
+#else
+  return 0;
+#endif
+}
+
 // Format a numeric hover value as a plain decimal so large magnitudes
 // (millions, billions) read as actual digits instead of e-notation. Falls back
 // to scientific only when the value is extremely large or extremely small,
@@ -223,6 +255,74 @@ void ChartView::componentComplete() {
 void ChartView::geometryChange(const QRectF &newGeom, const QRectF &oldGeom) {
   QQuickItem::geometryChange(newGeom, oldGeom);
   relayout();
+}
+
+void ChartView::itemChange(ItemChange change, const ItemChangeData &value) {
+  if (change == ItemSceneChange) {
+    // The window (and thus its render loop / frameSwapped signal) is changing:
+    // drop any monitor bound to the old window and rebind to the new one.
+    teardownPerfMonitor();
+    if (value.window) {
+      setupPerfMonitor(value.window);
+    }
+  }
+  QQuickItem::itemChange(change, value);
+}
+
+void ChartView::setupPerfMonitor(QQuickWindow *win) {
+  // Instrumentation is debug-only: skip entirely unless the logger would emit
+  // at debug level. In a normal Release run this returns immediately.
+  if (!win || !m_logger || !m_logger->should_log(spdlog::level::debug)) {
+    return;
+  }
+
+  if (!m_perfTimer) {
+    m_perfTimer = new QTimer(this);
+    m_perfTimer->setInterval(ChartConstants::PERF_REPORT_INTERVAL_MS);
+    connect(m_perfTimer, &QTimer::timeout, this, &ChartView::reportPerf);
+  }
+
+  // frameSwapped is emitted on the render thread under the threaded render
+  // loop, so keep the slot to a single relaxed atomic increment and let the
+  // GUI-thread timer read/reset it. A direct connection avoids event-queue
+  // overhead per frame.
+  m_frameSwapConn = connect(
+      win, &QQuickWindow::frameSwapped, this,
+      [this]() { m_frameCounter.fetch_add(1, std::memory_order_relaxed); },
+      Qt::DirectConnection);
+
+  m_frameCounter.store(0, std::memory_order_relaxed);
+  m_perfWindow.start();
+  m_perfTimer->start();
+}
+
+void ChartView::teardownPerfMonitor() {
+  if (m_frameSwapConn) {
+    disconnect(m_frameSwapConn);
+    m_frameSwapConn = {};
+  }
+  if (m_perfTimer) {
+    m_perfTimer->stop();
+  }
+}
+
+void ChartView::reportPerf() {
+  const int frames = m_frameCounter.exchange(0, std::memory_order_relaxed);
+  const qint64 elapsedMs =
+      m_perfWindow.isValid() ? m_perfWindow.restart() : 0;
+
+  // No frames presented this window means the chart was idle (Qt does not swap
+  // when nothing changed); skip so the log reflects interactive FPS only.
+  if (frames <= 0 || elapsedMs <= 0) {
+    return;
+  }
+
+  const double fps = frames * 1000.0 / static_cast<double>(elapsedMs);
+  const double rssMiB =
+      static_cast<double>(residentSetSizeBytes()) / (1024.0 * 1024.0);
+
+  m_logger->debug("[perf] render {:.1f} FPS ({} frames / {} ms), RSS {:.1f} MiB",
+                  fps, frames, elapsedMs, rssMiB);
 }
 
 void ChartView::wheelEvent(QWheelEvent *event) {
@@ -435,7 +535,8 @@ void ChartView::updateHoveredPoint(const QPointF &pos) {
                  ? m_hoverCategories.at(id)
                  : formatHoverNumber(bestData.x());
   } else if (m_hoverXIsDate) {
-    xLabel = QDateTime::fromMSecsSinceEpoch(static_cast<qint64>(bestData.x()))
+    xLabel = QDateTime::fromMSecsSinceEpoch(static_cast<qint64>(bestData.x()),
+                                            QTimeZone::UTC)
                  .toString("MM/dd/yyyy hh:mm:ss");
   } else {
     xLabel = formatHoverNumber(bestData.x());

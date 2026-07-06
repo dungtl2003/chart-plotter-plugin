@@ -116,7 +116,7 @@ void FileDataReader::start() {
 
     ++chunkIndex;
     totalBytes += chunk.size();
-    CP_INFO(
+    CP_TRACE(
         "[reader|thread {:#x}] read chunk #{} ({} bytes, {} total) — handing "
         "off to data handler",
         currentThreadId(), chunkIndex, chunk.size(), totalBytes);

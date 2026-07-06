@@ -185,6 +185,7 @@ Window {
                         yColumn: 1
                         name: "Alpha"
                         strokePattern: CP.ChartEnums.StrokePattern.Dash
+                        strokeColor: "#3d7eff"
                     }
                     CP.LineSeries {
                         source: multiSrc

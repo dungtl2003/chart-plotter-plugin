@@ -1,0 +1,51 @@
+<mxfile host="app.diagrams.net">
+  <diagram name="Page-1" id="tek6D1Pqu3l3TVWRLqVJ">
+    <mxGraphModel dx="1217" dy="1161" grid="0" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1080" pageHeight="520" math="0" shadow="0" adaptiveColors="auto">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="provider" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;fontSize=12;" value="SeriesComponentFactoryProvider&lt;br&gt;&lt;font color=&quot;#555555&quot;&gt;bộ tra cứu nhà máy&lt;/font&gt;" vertex="1">
+          <mxGeometry height="56" width="250" x="540" y="-68" as="geometry" />
+        </mxCell>
+        <mxCell id="factory" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;fontSize=12;" value="&lt;b&gt;ISeriesComponentFactory&lt;/b&gt;&lt;br&gt;&lt;font color=&quot;#555555&quot;&gt;một nhà máy cho mỗi loại biểu đồ&lt;/font&gt;" vertex="1">
+          <mxGeometry height="56" width="250" x="540" y="60" as="geometry" />
+        </mxCell>
+        <mxCell id="series" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=12;verticalAlign=top;spacingTop=8;" value="&lt;b&gt;AbstractSeries&lt;/b&gt;&lt;br&gt;&lt;font color=&quot;#555555&quot;&gt;LineSeries, BarSeries, PieSeries&lt;/font&gt;&lt;br&gt;&lt;br&gt;&lt;i&gt;series (thuộc tính từ QML)&lt;/i&gt;" vertex="1">
+          <mxGeometry height="120" width="230" x="200" y="-100" as="geometry" />
+        </mxCell>
+        <mxCell id="strategy" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=12;verticalAlign=top;spacingTop=8;" value="&lt;b&gt;ISeriesStrategy&lt;/b&gt;&lt;br&gt;&lt;font color=&quot;#555555&quot;&gt;LineSeriesStrategy, BarSeriesStrategy, PieSeriesStrategy&lt;/font&gt;&lt;br&gt;&lt;br&gt;&lt;i&gt;strategy (dựng RenderData)&lt;/i&gt;" vertex="1">
+          <mxGeometry height="120" width="250" x="360" y="300" as="geometry" />
+        </mxCell>
+        <mxCell id="renderer" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;fontSize=12;verticalAlign=top;spacingTop=8;" value="&lt;b&gt;IOpenGLRenderer&lt;/b&gt;&lt;br&gt;&lt;font color=&quot;#555555&quot;&gt;OpenGLLineRenderer, OpenGLBarRenderer, OpenGLAxisRenderer&lt;/font&gt;&lt;br&gt;&lt;br&gt;&lt;i&gt;renderer (phát lệnh OpenGL)&lt;/i&gt;" vertex="1">
+          <mxGeometry height="120" width="260" x="700" y="300" as="geometry" />
+        </mxCell>
+        <mxCell id="gpu" parent="1" style="shape=cylinder3;whiteSpace=wrap;html=1;boundedLbl=1;backgroundOutline=1;fillColor=#f8cecc;strokeColor=#b85450;fontSize=14;fontStyle=1;" value="GPU" vertex="1">
+          <mxGeometry height="80" width="70" x="795" y="480" as="geometry" />
+        </mxCell>
+        <mxCell id="e-prov-fac" edge="1" parent="1" source="provider" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;fontSize=11;" target="factory" value="chọn theo loại series">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e-ser-prov" edge="1" parent="1" source="series" style="rounded=0;html=1;endArrow=open;dashed=1;fontSize=11;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" target="provider" value="loại biểu đồ">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e-fac-str" edge="1" parent="1" source="factory" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;fontSize=11;" target="strategy" value="tạo">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e-fac-ren" edge="1" parent="1" source="factory" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;fontSize=11;" target="renderer" value="tạo">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e-ser-str" edge="1" parent="1" source="series" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;fontSize=11;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" target="strategy" value="&lt;div&gt;&lt;span&gt;dữ liệu đã phân giải&lt;/span&gt;&lt;/div&gt;&lt;div&gt;&lt;span&gt;+ viewport&lt;/span&gt;&lt;/div&gt;">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="290" y="360" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="e-str-ren" edge="1" parent="1" source="strategy" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;fontSize=11;" target="renderer" value="RenderData">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e-ren-gpu" edge="1" parent="1" source="renderer" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;fontSize=11;" target="gpu" value="lệnh OpenGL 3.3">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

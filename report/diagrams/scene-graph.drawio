@@ -1,0 +1,48 @@
+<mxGraphModel dx="800" dy="600" grid="0" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="900" pageHeight="600" math="0" shadow="0" adaptiveColors="auto">
+  <root>
+    <mxCell id="0"/>
+    <mxCell id="1" parent="0"/>
+    <mxCell id="sg" value="Cây scene graph của Qt Quick (retained mode &#8211; luồng kết xuất riêng)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=none;strokeColor=#999999;dashed=1;verticalAlign=top;fontStyle=2;fontSize=13;spacingTop=8;" vertex="1" parent="1">
+      <mxGeometry x="60" y="40" width="780" height="360" as="geometry"/>
+    </mxCell>
+    <mxCell id="cv" value="ChartView : QQuickItem&lt;br&gt;&lt;i&gt;updatePaintNode()&lt;/i&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=13;" vertex="1" parent="1">
+      <mxGeometry x="320" y="90" width="260" height="60" as="geometry"/>
+    </mxCell>
+    <mxCell id="rn" value="ChartRenderNode : QSGRenderNode&lt;br&gt;&lt;i&gt;(nút kết xuất tùy biến)&lt;/i&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=13;fontStyle=1;" vertex="1" parent="1">
+      <mxGeometry x="300" y="210" width="300" height="60" as="geometry"/>
+    </mxCell>
+    <mxCell id="lr" value="OpenGLLineRenderer" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;fontSize=12;" vertex="1" parent="1">
+      <mxGeometry x="90" y="320" width="200" height="54" as="geometry"/>
+    </mxCell>
+    <mxCell id="br" value="OpenGLBarRenderer" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;fontSize=12;" vertex="1" parent="1">
+      <mxGeometry x="350" y="320" width="200" height="54" as="geometry"/>
+    </mxCell>
+    <mxCell id="ar" value="OpenGLAxisRenderer" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;fontSize=12;" vertex="1" parent="1">
+      <mxGeometry x="610" y="320" width="200" height="54" as="geometry"/>
+    </mxCell>
+    <mxCell id="gpu" value="GPU" style="shape=cylinder3;whiteSpace=wrap;html=1;boundedLbl=1;backgroundOutline=1;fillColor=#f8cecc;strokeColor=#b85450;fontSize=14;fontStyle=1;" vertex="1" parent="1">
+      <mxGeometry x="380" y="470" width="140" height="80" as="geometry"/>
+    </mxCell>
+    <mxCell id="e-cv-rn" value="dựng / cập nhật nút con" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;fontSize=11;" edge="1" parent="1" source="cv" target="rn">
+      <mxGeometry relative="1" as="geometry"/>
+    </mxCell>
+    <mxCell id="e-rn-lr" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;" edge="1" parent="1" source="rn" target="lr">
+      <mxGeometry relative="1" as="geometry"/>
+    </mxCell>
+    <mxCell id="e-rn-br" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;" edge="1" parent="1" source="rn" target="br">
+      <mxGeometry relative="1" as="geometry"/>
+    </mxCell>
+    <mxCell id="e-rn-ar" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;" edge="1" parent="1" source="rn" target="ar">
+      <mxGeometry relative="1" as="geometry"/>
+    </mxCell>
+    <mxCell id="e-lr-gpu" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;" edge="1" parent="1" source="lr" target="gpu">
+      <mxGeometry relative="1" as="geometry"/>
+    </mxCell>
+    <mxCell id="e-br-gpu" value="lệnh OpenGL 3.3 thô" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;fontSize=11;" edge="1" parent="1" source="br" target="gpu">
+      <mxGeometry relative="1" as="geometry"/>
+    </mxCell>
+    <mxCell id="e-ar-gpu" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;" edge="1" parent="1" source="ar" target="gpu">
+      <mxGeometry relative="1" as="geometry"/>
+    </mxCell>
+  </root>
+</mxGraphModel>

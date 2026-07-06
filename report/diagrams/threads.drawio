@@ -1,0 +1,105 @@
+<mxfile host="app.diagrams.net">
+  <diagram name="Page-1" id="thread-model-fig-3-3">
+    <mxGraphModel dx="839" dy="525" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="860" pageHeight="760" math="0" shadow="0" adaptiveColors="auto">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="laneA" parent="1" style="swimlane;html=1;horizontal=1;startSize=34;whiteSpace=wrap;fontSize=12;fontStyle=1;fillColor=#dae8fc;strokeColor=#6c8ebf;swimlaneFillColor=#ffffff;" value="Luồng đọc  (×N nguồn)" vertex="1">
+          <mxGeometry height="560" width="200" y="40" as="geometry" />
+        </mxCell>
+        <mxCell id="rA1" parent="laneA" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=11;" value="Reader: đọc 1 khối (2 MB)&lt;br&gt;→ emitChunk" vertex="1">
+          <mxGeometry height="54" width="160" x="20" y="63" as="geometry" />
+        </mxCell>
+        <mxCell id="laneB" parent="1" style="swimlane;html=1;horizontal=1;startSize=34;whiteSpace=wrap;fontSize=12;fontStyle=1;fillColor=#dae8fc;strokeColor=#6c8ebf;swimlaneFillColor=#ffffff;" value="Luồng xử lý dữ liệu  (×N nguồn)" vertex="1">
+          <mxGeometry height="560" width="200" x="215" y="40" as="geometry" />
+        </mxCell>
+        <mxCell id="rB1" parent="laneB" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=11;" value="Parser: byte → hàng/lô" vertex="1">
+          <mxGeometry height="40" width="160" x="20" y="70" as="geometry" />
+        </mxCell>
+        <mxCell id="rB2" parent="laneB" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=11;" value="quy về double" vertex="1">
+          <mxGeometry height="40" width="160" x="20" y="126" as="geometry" />
+        </mxCell>
+        <mxCell id="rB3" parent="laneB" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=11;" value="ghi DataBuffer (cột)" vertex="1">
+          <mxGeometry height="40" width="160" x="20" y="182" as="geometry" />
+        </mxCell>
+        <mxCell id="rB4" parent="laneB" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=11;" value="dựng DataSnapshot (COW)" vertex="1">
+          <mxGeometry height="44" width="160" x="20" y="238" as="geometry" />
+        </mxCell>
+        <mxCell id="laneC" parent="1" style="swimlane;html=1;horizontal=1;startSize=34;whiteSpace=wrap;fontSize=12;fontStyle=1;fillColor=#d5e8d4;strokeColor=#82b366;swimlaneFillColor=#ffffff;" value="Luồng giao diện (GUI ×1)" vertex="1">
+          <mxGeometry height="560" width="200" x="430" y="40" as="geometry" />
+        </mxCell>
+        <mxCell id="rC1" parent="laneC" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=11;" value="onSnapshotReady" vertex="1">
+          <mxGeometry height="40" width="160" x="20" y="240" as="geometry" />
+        </mxCell>
+        <mxCell id="rC2" parent="laneC" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=11;" value="phân giải series" vertex="1">
+          <mxGeometry height="40" width="160" x="20" y="294" as="geometry" />
+        </mxCell>
+        <mxCell id="rC3" parent="laneC" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;dashed=1;fontSize=11;" value="buildPlan&lt;br&gt;&lt;font color=&quot;#555555&quot;&gt;(chỉ khi series đổi)&lt;/font&gt;" vertex="1">
+          <mxGeometry height="46" width="160" x="20" y="350" as="geometry" />
+        </mxCell>
+        <mxCell id="rC4" parent="laneC" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=11;" value="dựng gói kết xuất" vertex="1">
+          <mxGeometry height="40" width="160" x="20" y="412" as="geometry" />
+        </mxCell>
+        <mxCell id="rC5" parent="laneC" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=10;" value="đếm khung / FPS (atomic)" vertex="1">
+          <mxGeometry height="34" width="160" x="20" y="500" as="geometry" />
+        </mxCell>
+        <mxCell id="laneD" parent="1" style="swimlane;html=1;horizontal=1;startSize=34;whiteSpace=wrap;fontSize=12;fontStyle=1;fillColor=#ffe6cc;strokeColor=#d79b00;swimlaneFillColor=#ffffff;" value="Luồng kết xuất scene graph (×1)" vertex="1">
+          <mxGeometry height="560" width="200" x="645" y="40" as="geometry" />
+        </mxCell>
+        <mxCell id="rD1" parent="laneD" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;fontSize=11;" value="updatePaintNode" vertex="1">
+          <mxGeometry height="40" width="160" x="20" y="412" as="geometry" />
+        </mxCell>
+        <mxCell id="rD2" parent="laneD" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;fontSize=11;" value="vẽ OpenGL → GPU" vertex="1">
+          <mxGeometry height="40" width="160" x="20" y="480" as="geometry" />
+        </mxCell>
+        <mxCell id="eAB" edge="1" parent="1" source="rA1" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;fontSize=10;exitX=1;exitY=0.4;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" target="rB1" value="QueuedConnection">
+          <mxGeometry relative="1" x="-0.0907" y="15" as="geometry">
+            <mxPoint x="-12" y="-15" as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="eBA" edge="1" parent="1" source="rB3" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=open;dashed=1;strokeColor=#999999;fontSize=9;exitX=0;exitY=0.5;exitDx=0;exitDy=0;entryX=1;entryY=0.85;entryDx=0;entryDy=0;" target="rA1" value="giải phóng giấy phép&lt;br&gt;(semaphore ≤ 4 khối)">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="eB12" edge="1" parent="1" source="rB1" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;fontSize=9;" target="rB2" value="DirectConnection">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="eB23" edge="1" parent="1" source="rB2" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;" target="rB3">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="eB34" edge="1" parent="1" source="rB3" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;" target="rB4">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="eBC" edge="1" parent="1" source="rB4" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;fontSize=10;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" target="rC1" value="snapshotReady&lt;br&gt;(Queued · COW)">
+          <mxGeometry relative="1" x="0.0365" y="18" as="geometry">
+            <mxPoint as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="eC12" edge="1" parent="1" source="rC1" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;" target="rC2">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="eC23" edge="1" parent="1" source="rC2" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;" target="rC3">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="eC34" edge="1" parent="1" source="rC3" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;" target="rC4">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="eCD" edge="1" parent="1" source="rC4" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;fontSize=10;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" target="rD1" value="đồng bộ scene graph&lt;br&gt;(GUI tạm dừng, không khóa)">
+          <mxGeometry relative="1" x="0.0909" y="22" as="geometry">
+            <mxPoint as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="eD12" edge="1" parent="1" source="rD1" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;" target="rD2">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="eDC" edge="1" parent="1" source="rD2" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=open;dashed=1;strokeColor=#999999;fontSize=9;exitX=0;exitY=0.5;exitDx=0;exitDy=0;entryX=1;entryY=0.5;entryDx=0;entryDy=0;" target="rC5" value="frameSwapped&lt;br&gt;(Direct · atomic)">
+          <mxGeometry relative="1" x="0.2362" y="23" as="geometry">
+            <mxPoint x="-20" y="23" as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="legend" parent="1" style="text;html=1;align=left;verticalAlign=middle;fontSize=10;fontColor=#555555;" value="&lt;i&gt;nét liền = luồng dữ liệu/xử lý   ·   nét đứt = tín hiệu điều khiển (giấy phép, đếm khung)&lt;/i&gt;" vertex="1">
+          <mxGeometry height="24" width="620" y="612" as="geometry" />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

@@ -1,0 +1,117 @@
+<mxfile host="app.diagrams.net">
+  <diagram name="Page-1" id="X9D2sqhfXvRsnvgJrpJ_">
+    <mxGraphModel dx="1058" dy="662" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="680" pageHeight="1240" math="0" shadow="0" adaptiveColors="auto">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="src" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=12;" value="&lt;b&gt;DataSource&lt;/b&gt; (QML)&lt;br&gt;&lt;font color=&quot;#555555&quot;&gt;url + format (CSV, JSON/WebSocket,...)&lt;/font&gt;" vertex="1">
+          <mxGeometry height="54" width="300" x="190" y="40" as="geometry" />
+        </mxCell>
+        <mxCell id="pool" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=12;" value="&lt;b&gt;DataManagerPool&lt;/b&gt;" vertex="1">
+          <mxGeometry height="44" width="200" x="240" y="138" as="geometry" />
+        </mxCell>
+        <mxCell id="dm" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=none;strokeColor=#6c8ebf;dashed=1;verticalAlign=top;fontStyle=2;fontSize=12;spacingTop=6;" value="DataManager" vertex="1">
+          <mxGeometry height="120" width="600" x="40" y="230" as="geometry" />
+        </mxCell>
+        <mxCell id="reader" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=11;" value="Reader&lt;br&gt;&lt;font color=&quot;#555555&quot;&gt;byte thô&lt;/font&gt;" vertex="1">
+          <mxGeometry height="54" width="120" x="60" y="272" as="geometry" />
+        </mxCell>
+        <mxCell id="parser" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=11;" value="Parser&lt;br&gt;&lt;font color=&quot;#555555&quot;&gt;byte-span / hàng&lt;/font&gt;" vertex="1">
+          <mxGeometry height="54" width="120" x="220" y="272" as="geometry" />
+        </mxCell>
+        <mxCell id="updater" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=11;" value="DataBufferUpdater&lt;br&gt;&lt;font color=&quot;#555555&quot;&gt;quy về double&lt;/font&gt;" vertex="1">
+          <mxGeometry height="54" width="130" x="360" y="272" as="geometry" />
+        </mxCell>
+        <mxCell id="buffer" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=11;" value="DataBuffer&lt;br&gt;&lt;font color=&quot;#555555&quot;&gt;bộ đệm cột&lt;/font&gt;" vertex="1">
+          <mxGeometry height="54" width="110" x="510" y="272" as="geometry" />
+        </mxCell>
+        <mxCell id="snap" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=12;" value="&lt;b&gt;DataSnapshot&lt;/b&gt;&lt;br&gt;&lt;font color=&quot;#555555&quot;&gt;ảnh chụp bất biến (copy-on-write)&lt;/font&gt;" vertex="1">
+          <mxGeometry height="54" width="300" x="415" y="400" as="geometry" />
+        </mxCell>
+        <mxCell id="cv" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=12;" value="&lt;b&gt;ChartView&lt;/b&gt;&lt;br&gt;&lt;font color=&quot;#555555&quot;&gt;nhạc trưởng: dữ liệu, viewport, bố cục&lt;/font&gt;" vertex="1">
+          <mxGeometry height="54" width="300" x="415" y="500" as="geometry" />
+        </mxCell>
+        <mxCell id="resolver" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=12;" value="&lt;b&gt;SeriesDataResolver&lt;/b&gt;&lt;br&gt;&lt;font color=&quot;#555555&quot;&gt;phân giải cột, kiểu, phạm vi trục&lt;/font&gt;" vertex="1">
+          <mxGeometry height="54" width="300" x="415" y="588" as="geometry" />
+        </mxCell>
+        <mxCell id="strategy" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=12;" value="&lt;b&gt;ISeriesStrategy::build&lt;/b&gt;&lt;br&gt;&lt;font color=&quot;#555555&quot;&gt;bộ nhớ đệm điểm + giảm mẫu&lt;/font&gt;" vertex="1">
+          <mxGeometry height="54" width="300" x="415" y="676" as="geometry" />
+        </mxCell>
+        <mxCell id="rdata" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=12;" value="&lt;b&gt;RenderData&lt;/b&gt;" vertex="1">
+          <mxGeometry height="44" width="200" x="80" y="400" as="geometry" />
+        </mxCell>
+        <mxCell id="pkg" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;fontSize=12;" value="&lt;b&gt;ChartRenderPackage&lt;/b&gt;" vertex="1">
+          <mxGeometry height="44" width="240" x="60" y="478" as="geometry" />
+        </mxCell>
+        <mxCell id="node" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;fontSize=12;" value="&lt;b&gt;ChartRenderNode&lt;/b&gt; (QSGRenderNode)" vertex="1">
+          <mxGeometry height="44" width="280" x="40" y="556" as="geometry" />
+        </mxCell>
+        <mxCell id="rend" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;fontSize=12;" value="&lt;b&gt;IOpenGLRenderer&lt;/b&gt; (Line / Bar / Axis)" vertex="1">
+          <mxGeometry height="44" width="280" x="40" y="634" as="geometry" />
+        </mxCell>
+        <mxCell id="gpu" parent="1" style="shape=cylinder3;whiteSpace=wrap;html=1;boundedLbl=1;backgroundOutline=1;fillColor=#f8cecc;strokeColor=#b85450;fontSize=14;fontStyle=1;" value="GPU" vertex="1">
+          <mxGeometry height="80" width="80" x="140" y="726" as="geometry" />
+        </mxCell>
+        <mxCell id="e1" edge="1" parent="1" source="src" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;" target="pool">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e2" edge="1" parent="1" source="pool" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;fontSize=10;" target="reader" value="mỗi nguồn một DataManager">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e3" edge="1" parent="1" source="reader" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;" target="parser">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e4" edge="1" parent="1" source="parser" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;" target="updater">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e5" edge="1" parent="1" source="updater" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;" target="buffer">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e6" edge="1" parent="1" source="buffer" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;fontSize=10;exitX=0.5;exitY=1;exitDx=0;exitDy=0;" target="snap" value="phát ảnh chụp">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e7" edge="1" parent="1" source="snap" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;fontSize=10;" target="cv" value="signal/slot (Observer)">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e8" edge="1" parent="1" source="cv" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;" target="resolver">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e9" edge="1" parent="1" source="resolver" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;" target="strategy">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e10" edge="1" parent="1" source="strategy" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;" target="rdata">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="360" y="703" />
+              <mxPoint x="360" y="422" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="e11" edge="1" parent="1" source="rdata" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;" target="pkg">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e12" edge="1" parent="1" source="pkg" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;" target="node">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e13" edge="1" parent="1" source="node" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;" target="rend">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e14" edge="1" parent="1" source="rend" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;fontSize=10;" target="gpu" value="lệnh OpenGL 3.3">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="planner" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;dashed=1;fontSize=12;" value="&lt;b&gt;ChartLayoutPlanner&lt;/b&gt;&lt;br&gt;&lt;font color=&quot;#555555&quot;&gt;kiểm tra hợp lệ · hệ tọa độ · lề&lt;/font&gt;" vertex="1">
+          <mxGeometry height="54" width="190" x="670" y="272" as="geometry" />
+        </mxCell>
+        <mxCell id="e_plan_in" edge="1" parent="1" source="cv" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=open;dashed=1;strokeColor=#9673a6;fontSize=10;exitX=1;exitY=0.25;exitDx=0;exitDy=0;entryX=0.5;entryY=1;entryDx=0;entryDy=0;" target="planner" value="khi tập series đổi">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e_plan_out" edge="1" parent="1" source="planner" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=open;dashed=1;strokeColor=#9673a6;fontSize=10;exitX=0.75;exitY=1;exitDx=0;exitDy=0;entryX=1;entryY=0.75;entryDx=0;entryDy=0;" target="cv" value="ChartLayoutPlan">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="plan_legend" parent="1" style="text;html=1;align=left;verticalAlign=middle;fontSize=10;fontColor=#555555;" value="&lt;i&gt;- - - đường cấu hình (chỉ khi tập series thay đổi)&lt;/i&gt;" vertex="1">
+          <mxGeometry height="24" width="240" x="640" y="554" as="geometry" />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

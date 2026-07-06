@@ -166,7 +166,7 @@ void DataManager::onChunkReceived(const QByteArray &chunk) {
   // Runs on the data-handler thread, distinct from the reader thread that
   // produced the chunk — the thread ids printed here vs in the reader prove the
   // two stages run concurrently.
-  CP_DEBUG(
+  CP_TRACE(
       "[data-handler|thread {:#x}] processing chunk ({} bytes) from reader",
       reinterpret_cast<quintptr>(QThread::currentThreadId()), chunk.size());
 

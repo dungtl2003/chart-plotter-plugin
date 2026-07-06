@@ -1,5 +1,7 @@
 #include "ChartPlotter/utils/Variant.hpp"
 
+#include <QTimeZone>
+
 namespace ChartPlotter {
 
 bool Utils::Variant::isDouble(const QVariant &value) {
@@ -31,9 +33,14 @@ bool Utils::Variant::variantToDouble(const QVariant &value, double &out) {
 
 bool Utils::Variant::variantToDateNumber(const QVariant &value, double &out) {
   if (value.canConvert<QDateTime>()) {
-    const QDateTime dt = value.toDateTime();
+    QDateTime dt = value.toDateTime();
 
     if (dt.isValid()) {
+      // Reinterpret a zone-less (LocalTime) wall-clock as UTC so date values
+      // agree with the CSV fast-path parsers and the UTC-formatted axis labels.
+      if (dt.timeSpec() == Qt::LocalTime) {
+        dt.setTimeZone(QTimeZone::UTC);
+      }
       out = static_cast<double>(dt.toMSecsSinceEpoch());
       return true;
     }
@@ -43,8 +50,9 @@ bool Utils::Variant::variantToDateNumber(const QVariant &value, double &out) {
     const QDate date = value.toDate();
 
     if (date.isValid()) {
-      out =
-          static_cast<double>(QDateTime(date.startOfDay()).toMSecsSinceEpoch());
+      QDateTime dt(date.startOfDay());
+      dt.setTimeZone(QTimeZone::UTC);
+      out = static_cast<double>(dt.toMSecsSinceEpoch());
       return true;
     }
   }

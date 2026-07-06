@@ -3,6 +3,7 @@
 #include "ChartPlotter/utils/RenderMath.hpp"
 
 #include <QDateTime>
+#include <QTimeZone>
 
 namespace ChartPlotter {
 
@@ -41,8 +42,8 @@ AxisTicks ValueAxis::calculateTicks(const AxisRange &range, int targetTickCount,
     if (!isDateTime) {
       tick.label = formatTickLabel(value, step);
     } else {
-      tick.label =
-          QDateTime::fromMSecsSinceEpoch(value).toString("MM/dd/yyyy hh:mm:ss");
+      tick.label = QDateTime::fromMSecsSinceEpoch(value, QTimeZone::UTC)
+                       .toString("MM/dd/yyyy hh:mm:ss");
     }
     result.ticks.append(tick);
   }

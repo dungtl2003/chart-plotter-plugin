@@ -1,0 +1,60 @@
+<mxGraphModel dx="900" dy="600" grid="0" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="760" pageHeight="380" math="0" shadow="0" adaptiveColors="auto">
+  <root>
+    <mxCell id="0"/>
+    <mxCell id="1" parent="0"/>
+    <mxCell id="annTL" value="&lt;b&gt;p&lt;/b&gt;: hình chiếu rơi TRONG đoạn&#10;&#8594; đo khoảng cách vuông góc tới trục (phần thân thẳng)" style="text;html=1;align=left;verticalAlign=middle;fontSize=12;" vertex="1" parent="1">
+      <mxGeometry x="24" y="10" width="340" height="40" as="geometry"/>
+    </mxCell>
+    <mxCell id="annTR" value="&lt;b&gt;q&lt;/b&gt;: hình chiếu rơi NGOÀI đoạn&#10;&#8594; đo khoảng cách xuyên tâm tới đầu mút (phần đầu bo tròn)" style="text;html=1;align=left;verticalAlign=middle;fontSize=12;" vertex="1" parent="1">
+      <mxGeometry x="400" y="10" width="336" height="40" as="geometry"/>
+    </mxCell>
+    <mxCell id="capsule" value="" style="rounded=1;arcSize=50;absoluteArcSize=0;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;" vertex="1" parent="1">
+      <mxGeometry x="140" y="140" width="440" height="140" as="geometry"/>
+    </mxCell>
+    <mxCell id="fillLbl" value="vùng tô: dist(p, đoạn AB) ≤ r" style="text;html=1;align=center;verticalAlign=middle;fontSize=11;fontStyle=2;fontColor=#3b5a86;" vertex="1" parent="1">
+      <mxGeometry x="300" y="246" width="220" height="20" as="geometry"/>
+    </mxCell>
+    <mxCell id="center" value="" style="endArrow=none;html=1;strokeColor=#333333;strokeWidth=2;" edge="1" parent="1">
+      <mxGeometry relative="1" as="geometry">
+        <mxPoint x="210" y="210" as="sourcePoint"/>
+        <mxPoint x="510" y="210" as="targetPoint"/>
+      </mxGeometry>
+    </mxCell>
+    <mxCell id="dotA" value="" style="ellipse;whiteSpace=wrap;html=1;fillColor=#333333;strokeColor=#333333;" vertex="1" parent="1"><mxGeometry x="204" y="204" width="12" height="12" as="geometry"/></mxCell>
+    <mxCell id="dotB" value="" style="ellipse;whiteSpace=wrap;html=1;fillColor=#333333;strokeColor=#333333;" vertex="1" parent="1"><mxGeometry x="504" y="204" width="12" height="12" as="geometry"/></mxCell>
+    <mxCell id="lblA" value="A" style="text;html=1;align=center;fontSize=13;fontStyle=1;" vertex="1" parent="1"><mxGeometry x="196" y="214" width="20" height="18" as="geometry"/></mxCell>
+    <mxCell id="lblB" value="B" style="text;html=1;align=center;fontSize=13;fontStyle=1;" vertex="1" parent="1"><mxGeometry x="506" y="214" width="20" height="18" as="geometry"/></mxCell>
+    <mxCell id="rVert" value="r" style="endArrow=classicThin;startArrow=classicThin;html=1;strokeColor=#b85450;fontColor=#b85450;fontSize=12;fontStyle=1;" edge="1" parent="1">
+      <mxGeometry relative="1" as="geometry">
+        <mxPoint x="400" y="210" as="sourcePoint"/>
+        <mxPoint x="400" y="140" as="targetPoint"/>
+      </mxGeometry>
+    </mxCell>
+    <mxCell id="rRad" value="r" style="endArrow=classicThin;startArrow=none;html=1;strokeColor=#b85450;fontColor=#b85450;fontSize=12;fontStyle=1;" edge="1" parent="1">
+      <mxGeometry relative="1" as="geometry">
+        <mxPoint x="210" y="210" as="sourcePoint"/>
+        <mxPoint x="161" y="161" as="targetPoint"/>
+      </mxGeometry>
+    </mxCell>
+    <mxCell id="dotP" value="" style="ellipse;whiteSpace=wrap;html=1;fillColor=#b85450;strokeColor=#7a2e2b;" vertex="1" parent="1"><mxGeometry x="294" y="72" width="12" height="12" as="geometry"/></mxCell>
+    <mxCell id="lblP" value="p" style="text;html=1;align=center;fontSize=13;fontStyle=1;" vertex="1" parent="1"><mxGeometry x="278" y="60" width="16" height="18" as="geometry"/></mxCell>
+    <mxCell id="distP" value="dist" style="endArrow=none;html=1;dashed=1;strokeColor=#666666;fontSize=11;fontColor=#444444;" edge="1" parent="1">
+      <mxGeometry relative="1" as="geometry">
+        <mxPoint x="300" y="84" as="sourcePoint"/>
+        <mxPoint x="300" y="210" as="targetPoint"/>
+      </mxGeometry>
+    </mxCell>
+    <mxCell id="dotProjP" value="" style="ellipse;whiteSpace=wrap;html=1;fillColor=none;strokeColor=#666666;" vertex="1" parent="1"><mxGeometry x="295" y="205" width="10" height="10" as="geometry"/></mxCell>
+    <mxCell id="dotQ" value="" style="ellipse;whiteSpace=wrap;html=1;fillColor=#b85450;strokeColor=#7a2e2b;" vertex="1" parent="1"><mxGeometry x="614" y="104" width="12" height="12" as="geometry"/></mxCell>
+    <mxCell id="lblQ" value="q" style="text;html=1;align=center;fontSize=13;fontStyle=1;" vertex="1" parent="1"><mxGeometry x="628" y="96" width="16" height="18" as="geometry"/></mxCell>
+    <mxCell id="distQ" value="dist" style="endArrow=none;html=1;dashed=1;strokeColor=#666666;fontSize=11;fontColor=#444444;" edge="1" parent="1">
+      <mxGeometry relative="1" as="geometry">
+        <mxPoint x="620" y="116" as="sourcePoint"/>
+        <mxPoint x="510" y="210" as="targetPoint"/>
+      </mxGeometry>
+    </mxCell>
+    <mxCell id="caption" value="Vùng tô xanh chính là capsule: { p : dist(p, đoạn AB) ≤ r } = thân chữ nhật lệch r hai bên + hai đầu bo tròn bán kính r" style="text;html=1;align=center;verticalAlign=middle;fontSize=11;fontStyle=2;" vertex="1" parent="1">
+      <mxGeometry x="90" y="320" width="580" height="40" as="geometry"/>
+    </mxCell>
+  </root>
+</mxGraphModel>

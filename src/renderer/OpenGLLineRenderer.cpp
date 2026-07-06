@@ -264,7 +264,7 @@ void OpenGLLineRenderer::buildSolidStrokeVertices(
 
   const auto *lineData = m_data.get();
   const float halfWidth = lineData->stroke.width * 0.5f;
-  const float coverRadius = halfWidth + lineData->antialias;
+  const float coverRadius = halfWidth + lineData->antialias + 1.0f;
 
   for (int i = 0; i + 1 < points.size(); ++i) {
     appendCapsule(outVertices, points[i], points[i + 1], coverRadius);

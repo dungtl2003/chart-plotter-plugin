@@ -17,6 +17,7 @@
 #include <QQuickItem>
 #include <QVariantMap>
 #include <QtQml>
+#include <atomic>
 #include <memory>
 
 namespace ChartPlotter {
@@ -206,6 +207,7 @@ public slots:
 
 protected:
   void geometryChange(const QRectF &newGeom, const QRectF &oldGeom) override;
+  void itemChange(ItemChange change, const ItemChangeData &value) override;
   void wheelEvent(QWheelEvent *event) override;
   void mousePressEvent(QMouseEvent *event) override;
   void mouseMoveEvent(QMouseEvent *event) override;
@@ -308,6 +310,21 @@ private:
 
   void scheduleUpdate();
   void performScheduledUpdate();
+
+  // Debug-only render performance instrumentation: counts frames actually
+  // presented (QQuickWindow::frameSwapped) over a rolling window and logs the
+  // resulting FPS together with the process resident set size. Only active
+  // when the instance logger is at debug level (Debug builds, or a Release
+  // build run with CHARTPLOTTER_PLUGIN_LOG_LEVEL=debug), so it costs nothing in
+  // a normal Release run. During zoom/pan the swap rate is exactly the
+  // interactive FPS, so idle windows (no frames) are skipped rather than logged.
+  QTimer *m_perfTimer = nullptr;
+  std::atomic<int> m_frameCounter{0};
+  QElapsedTimer m_perfWindow;
+  QMetaObject::Connection m_frameSwapConn;
+  void setupPerfMonitor(QQuickWindow *win);
+  void teardownPerfMonitor();
+  void reportPerf();
 
   void replan();
   void relayout();

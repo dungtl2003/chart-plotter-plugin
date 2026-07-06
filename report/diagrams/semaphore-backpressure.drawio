@@ -1,0 +1,57 @@
+<mxGraphModel dx="900" dy="700" grid="0" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="920" pageHeight="640" math="0" shadow="0" adaptiveColors="auto">
+  <root>
+    <mxCell id="0"/>
+    <mxCell id="1" parent="0"/>
+    <mxCell id="lane-r" value="Luồng đọc (reader thread)" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;verticalAlign=top;fontStyle=1;fontSize=13;spacingTop=8;dashed=1;" vertex="1" parent="1">
+      <mxGeometry x="40" y="40" width="360" height="540" as="geometry"/>
+    </mxCell>
+    <mxCell id="lane-h" value="Luồng xử lý dữ liệu (data-handler thread)" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;verticalAlign=top;fontStyle=1;fontSize=13;spacingTop=8;dashed=1;" vertex="1" parent="1">
+      <mxGeometry x="520" y="40" width="360" height="540" as="geometry"/>
+    </mxCell>
+    <mxCell id="read" value="Đọc khối 2 MB&lt;br&gt;&lt;font color=&quot;#555555&quot;&gt;while (!file.atEnd())&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;fontSize=12;" vertex="1" parent="1">
+      <mxGeometry x="90" y="90" width="260" height="54" as="geometry"/>
+    </mxCell>
+    <mxCell id="acq" value="emitChunk(): tryAcquire(1, 50ms)&lt;br&gt;&lt;font color=&quot;#b85450&quot;&gt;chặn tại đây khi 0 giấy phép (4 khối đang lưu chuyển)&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;fontSize=12;" vertex="1" parent="1">
+      <mxGeometry x="90" y="188" width="260" height="66" as="geometry"/>
+    </mxCell>
+    <mxCell id="sem" value="QSemaphore m_freeSlots&lt;br&gt;&lt;font color=&quot;#555555&quot;&gt;4 giấy phép = 4 chỗ trống&lt;br&gt;(kReaderQueueDepth = 4)&lt;/font&gt;" style="shape=process;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=12;fontStyle=1;" vertex="1" parent="1">
+      <mxGeometry x="360" y="300" width="200" height="80" as="geometry"/>
+    </mxCell>
+    <mxCell id="emit" value="emit dataReceived(chunk)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;fontSize=12;" vertex="1" parent="1">
+      <mxGeometry x="90" y="300" width="260" height="46" as="geometry"/>
+    </mxCell>
+    <mxCell id="recv" value="onChunkReceived(chunk)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=12;" vertex="1" parent="1">
+      <mxGeometry x="570" y="90" width="260" height="46" as="geometry"/>
+    </mxCell>
+    <mxCell id="proc" value="parse → convert → append&lt;br&gt;&lt;font color=&quot;#555555&quot;&gt;DirectConnection (đồng bộ)&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=12;" vertex="1" parent="1">
+      <mxGeometry x="570" y="176" width="260" height="60" as="geometry"/>
+    </mxCell>
+    <mxCell id="rel" value="releaseChunkSlot()&lt;br&gt;&lt;font color=&quot;#555555&quot;&gt;release(1): giải phóng đúng 1 chỗ&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=12;" vertex="1" parent="1">
+      <mxGeometry x="570" y="300" width="260" height="60" as="geometry"/>
+    </mxCell>
+    <mxCell id="e-read-acq" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;" edge="1" parent="1" source="read" target="acq">
+      <mxGeometry relative="1" as="geometry"/>
+    </mxCell>
+    <mxCell id="e-acq-emit" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;" edge="1" parent="1" source="acq" target="emit">
+      <mxGeometry relative="1" as="geometry"/>
+    </mxCell>
+    <mxCell id="e-acq-sem" value="giành 1 giấy phép" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=open;dashed=1;fontSize=11;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.2;entryDx=0;entryDy=0;" edge="1" parent="1" source="acq" target="sem">
+      <mxGeometry relative="1" as="geometry"/>
+    </mxCell>
+    <mxCell id="e-emit-recv" value="emit dataReceived&lt;br&gt;QueuedConnection (vượt luồng)" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;fontSize=11;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" edge="1" parent="1" source="emit" target="recv">
+      <mxGeometry relative="1" as="geometry"/>
+    </mxCell>
+    <mxCell id="e-recv-proc" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;" edge="1" parent="1" source="recv" target="proc">
+      <mxGeometry relative="1" as="geometry"/>
+    </mxCell>
+    <mxCell id="e-proc-rel" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;" edge="1" parent="1" source="proc" target="rel">
+      <mxGeometry relative="1" as="geometry"/>
+    </mxCell>
+    <mxCell id="e-rel-sem" value="release(1)" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=open;dashed=1;fontSize=11;exitX=0;exitY=0.5;exitDx=0;exitDy=0;entryX=1;entryY=0.8;entryDx=0;entryDy=0;" edge="1" parent="1" source="rel" target="sem">
+      <mxGeometry relative="1" as="geometry"/>
+    </mxCell>
+    <mxCell id="note" value="Bộ đọc chạy trước nhiều nhất 4 khối → bộ nhớ lưu chuyển ≈ 4 × 2 MB = 8 MB" style="text;html=1;align=center;fontSize=12;fontStyle=2;fillColor=none;strokeColor=none;" vertex="1" parent="1">
+      <mxGeometry x="120" y="596" width="680" height="30" as="geometry"/>
+    </mxCell>
+  </root>
+</mxGraphModel>

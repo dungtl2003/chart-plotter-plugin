@@ -1,0 +1,97 @@
+<mxfile host="app.diagrams.net">
+  <diagram name="Page-1" id="9aUxx74x4alqKs0KNcrB">
+    <mxGraphModel dx="1217" dy="761" grid="0" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="900" pageHeight="360" math="0" shadow="0" adaptiveColors="auto">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="lbl-raw" parent="1" style="text;html=1;align=right;verticalAlign=middle;fontSize=12;fontStyle=2;" value="Điểm thô&#xa;(16 điểm)" vertex="1">
+          <mxGeometry height="34" width="59" x="61" y="48" as="geometry" />
+        </mxCell>
+        <mxCell id="lbl-l0" parent="1" style="text;html=1;align=right;verticalAlign=middle;fontSize=12;fontStyle=2;" value="Mức 0&#xa;(nhịp = 4)" vertex="1">
+          <mxGeometry height="40" width="57" x="63" y="122" as="geometry" />
+        </mxCell>
+        <mxCell id="lbl-l1" parent="1" style="text;html=1;align=right;verticalAlign=middle;fontSize=12;fontStyle=2;" value="Mức 1&#xa;(nhịp = 16)" vertex="1">
+          <mxGeometry height="40" width="69" x="51" y="212" as="geometry" />
+        </mxCell>
+        <mxCell id="d0" parent="1" style="ellipse;whiteSpace=wrap;html=1;fillColor=#6c8ebf;strokeColor=#3c5a80;" value="" vertex="1">
+          <mxGeometry height="11" width="11" x="147" y="60" as="geometry" />
+        </mxCell>
+        <mxCell id="d1" parent="1" style="ellipse;whiteSpace=wrap;html=1;fillColor=#6c8ebf;strokeColor=#3c5a80;" value="" vertex="1">
+          <mxGeometry height="11" width="11" x="192" y="60" as="geometry" />
+        </mxCell>
+        <mxCell id="d2" parent="1" style="ellipse;whiteSpace=wrap;html=1;fillColor=#6c8ebf;strokeColor=#3c5a80;" value="" vertex="1">
+          <mxGeometry height="11" width="11" x="237" y="60" as="geometry" />
+        </mxCell>
+        <mxCell id="d3" parent="1" style="ellipse;whiteSpace=wrap;html=1;fillColor=#6c8ebf;strokeColor=#3c5a80;" value="" vertex="1">
+          <mxGeometry height="11" width="11" x="282" y="60" as="geometry" />
+        </mxCell>
+        <mxCell id="d4" parent="1" style="ellipse;whiteSpace=wrap;html=1;fillColor=#6c8ebf;strokeColor=#3c5a80;" value="" vertex="1">
+          <mxGeometry height="11" width="11" x="327" y="60" as="geometry" />
+        </mxCell>
+        <mxCell id="d5" parent="1" style="ellipse;whiteSpace=wrap;html=1;fillColor=#6c8ebf;strokeColor=#3c5a80;" value="" vertex="1">
+          <mxGeometry height="11" width="11" x="372" y="60" as="geometry" />
+        </mxCell>
+        <mxCell id="d6" parent="1" style="ellipse;whiteSpace=wrap;html=1;fillColor=#6c8ebf;strokeColor=#3c5a80;" value="" vertex="1">
+          <mxGeometry height="11" width="11" x="417" y="60" as="geometry" />
+        </mxCell>
+        <mxCell id="d7" parent="1" style="ellipse;whiteSpace=wrap;html=1;fillColor=#6c8ebf;strokeColor=#3c5a80;" value="" vertex="1">
+          <mxGeometry height="11" width="11" x="462" y="60" as="geometry" />
+        </mxCell>
+        <mxCell id="d8" parent="1" style="ellipse;whiteSpace=wrap;html=1;fillColor=#6c8ebf;strokeColor=#3c5a80;" value="" vertex="1">
+          <mxGeometry height="11" width="11" x="507" y="60" as="geometry" />
+        </mxCell>
+        <mxCell id="d9" parent="1" style="ellipse;whiteSpace=wrap;html=1;fillColor=#6c8ebf;strokeColor=#3c5a80;" value="" vertex="1">
+          <mxGeometry height="11" width="11" x="552" y="60" as="geometry" />
+        </mxCell>
+        <mxCell id="d10" parent="1" style="ellipse;whiteSpace=wrap;html=1;fillColor=#6c8ebf;strokeColor=#3c5a80;" value="" vertex="1">
+          <mxGeometry height="11" width="11" x="597" y="60" as="geometry" />
+        </mxCell>
+        <mxCell id="d11" parent="1" style="ellipse;whiteSpace=wrap;html=1;fillColor=#6c8ebf;strokeColor=#3c5a80;" value="" vertex="1">
+          <mxGeometry height="11" width="11" x="642" y="60" as="geometry" />
+        </mxCell>
+        <mxCell id="d12" parent="1" style="ellipse;whiteSpace=wrap;html=1;fillColor=#6c8ebf;strokeColor=#3c5a80;" value="" vertex="1">
+          <mxGeometry height="11" width="11" x="687" y="60" as="geometry" />
+        </mxCell>
+        <mxCell id="d13" parent="1" style="ellipse;whiteSpace=wrap;html=1;fillColor=#6c8ebf;strokeColor=#3c5a80;" value="" vertex="1">
+          <mxGeometry height="11" width="11" x="732" y="60" as="geometry" />
+        </mxCell>
+        <mxCell id="d14" parent="1" style="ellipse;whiteSpace=wrap;html=1;fillColor=#6c8ebf;strokeColor=#3c5a80;" value="" vertex="1">
+          <mxGeometry height="11" width="11" x="777" y="60" as="geometry" />
+        </mxCell>
+        <mxCell id="d15" parent="1" style="ellipse;whiteSpace=wrap;html=1;fillColor=#6c8ebf;strokeColor=#3c5a80;" value="" vertex="1">
+          <mxGeometry height="11" width="11" x="822" y="60" as="geometry" />
+        </mxCell>
+        <mxCell id="b0" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=12;" value="x0" vertex="1">
+          <mxGeometry height="44" width="176" x="132" y="120" as="geometry" />
+        </mxCell>
+        <mxCell id="b1" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=12;" value="x1" vertex="1">
+          <mxGeometry height="44" width="176" x="312" y="120" as="geometry" />
+        </mxCell>
+        <mxCell id="b2" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=12;" value="x2" vertex="1">
+          <mxGeometry height="44" width="176" x="492" y="120" as="geometry" />
+        </mxCell>
+        <mxCell id="b3" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=12;" value="x3" vertex="1">
+          <mxGeometry height="44" width="176" x="672" y="120" as="geometry" />
+        </mxCell>
+        <mxCell id="B0" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=12;" value="X0&#xa;(min/max của 4 xô Mức 0)" vertex="1">
+          <mxGeometry height="46" width="716" x="132" y="212" as="geometry" />
+        </mxCell>
+        <mxCell id="c0" edge="1" parent="1" source="b0" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=none;strokeColor=#999999;" target="B0">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="c1" edge="1" parent="1" source="b1" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=none;strokeColor=#999999;" target="B0">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="c2" edge="1" parent="1" source="b2" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=none;strokeColor=#999999;" target="B0">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="c3" edge="1" parent="1" source="b3" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=none;strokeColor=#999999;" target="B0">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="note" parent="1" style="text;html=1;align=center;verticalAlign=middle;fontSize=11;fontStyle=2;" value="Xô chia theo SỐ LƯỢNG điểm (không theo bề rộng x); mỗi xô lưu điểm min-y và max-y thực trong nhịp của nó.&#xa;Mỗi mức thô hơn gom 4 xô của mức dưới - nhịp tăng ×4 (4, 16, 64,...) tới khi đỉnh còn ≤ 128 xô." vertex="1">
+          <mxGeometry height="46" width="740" x="120" y="288" as="geometry" />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

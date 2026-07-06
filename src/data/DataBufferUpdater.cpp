@@ -4,6 +4,7 @@
 #include "ChartPlotter/utils/Variant.hpp"
 
 #include <QDateTime>
+#include <QTimeZone>
 
 #include <charconv>
 #include <limits>
@@ -138,6 +139,13 @@ bool isoDateMs(std::string_view s, double &out) {
   if (!dt.isValid()) {
     return false;
   }
+  // A timestamp with no explicit zone parses as LocalTime; reinterpret the same
+  // wall-clock as UTC so this matches fastDateMs (which always assumes UTC) and
+  // the fast mode can be selected. Strings carrying 'Z' or an offset keep their
+  // zone.
+  if (dt.timeSpec() == Qt::LocalTime) {
+    dt.setTimeZone(QTimeZone::UTC);
+  }
   out = static_cast<double>(dt.toMSecsSinceEpoch());
   return true;
 }
@@ -165,6 +173,11 @@ bool refDateMs(std::string_view s, double &out) {
     }
   }
   if (dt.isValid()) {
+    // Zone-less timestamps parse as LocalTime; treat the wall-clock as UTC to
+    // stay consistent with fastDateMs and isoDateMs (see the note there).
+    if (dt.timeSpec() == Qt::LocalTime) {
+      dt.setTimeZone(QTimeZone::UTC);
+    }
     out = static_cast<double>(dt.toMSecsSinceEpoch());
     return true;
   }
